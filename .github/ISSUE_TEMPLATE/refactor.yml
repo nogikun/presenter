@@ -1,0 +1,80 @@
+name: "♻️ リファクタリング提案"
+description: "コードベースの改善を目的としたリファクタリングを提案する"
+labels: ["refactoring"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        リファクタリングの提案ありがとうございます。以下の情報を記入してください。
+
+  - type: textarea
+    id: overview
+    attributes:
+      label: 概要
+      description: リファクタリングの背景や目的を簡潔に記載してください。
+      placeholder: 例）～～関数の責務が肥大化しているため、分割して可読性を向上させたい。
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: 対象ファイル
+      description: リファクタリングを行う予定のファイルやモジュールを明記してください。
+      placeholder: 例）`utils/formatter.ts`、`components/UserCard.tsx`
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_problem
+    attributes:
+      label: 現在の問題点
+      description: 具体的な問題（複雑なロジック、重複コードなど）を記載してください。
+      placeholder: 例）同じ処理が複数箇所で繰り返されており、コードの可読性が低くなっている。
+    validations:
+      required: true
+
+  - type: textarea
+    id: approach
+    attributes:
+      label: 改善案／アプローチ
+      description: どのようにリファクタリングを行うか、設計方針や対応案を記載してください。
+      placeholder: 例）関数を責務ごとに分割し、ユーティリティ関数として再利用可能にする。
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: 影響範囲
+      description: 他の機能やファイルへの影響、依存関係があるかを記載してください。
+      placeholder: 例）この変更は`components/UserCard.tsx`に影響を与える可能性がある。
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: リスク・懸念点
+      description: 想定されるリスクや懸念があれば記載してください。
+      placeholder: 例）リファクタリング後のテストが不十分で、既存の機能に影響を与える可能性がある。
+    validations:
+      required: true
+
+  - type: textarea
+    id: done_criteria
+    attributes:
+      label: 完了条件
+      description: リファクタリングが完了したと判断する基準を記載してください。
+      placeholder: 例）責務ごとに関数が分割され、既存のテストがすべてパスする。
+    validations:
+      required: true
+
+  - type: textarea
+    id: references
+    attributes:
+      label: 参考資料（任意）
+      description: 設計や方針に参考にした資料があれば記載してください。
+      placeholder: 例）[example](https://example.com)
+    validations:
+      required: false

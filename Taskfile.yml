@@ -1,0 +1,22 @@
+version: "3"
+
+tasks:
+  # =============================================================================
+  # ヘルプ
+  # =============================================================================
+  # 引数なしで `task` を実行したときに、カスタム順のリストを表示する
+  default:
+    silent: true
+    cmds:
+      - task --list-all --sort none
+  # =============================================================================
+  # 初期化 — 開発環境セットアップ
+  # =============================================================================
+  init:
+    desc: Install environment
+    cmds:
+      - git config --local commit.template .commit-template
+      - mise trust .mise.toml
+      - mise install
+      # - pipx install pre-commit
+      # - pre-commit install

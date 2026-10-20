@@ -1,0 +1,50 @@
+name: 🛠️ 開発タスクの追加
+description: プロダクトバックログアイテムを定義する際に利用します
+labels: ["develop"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        開発タスクの作成ありがとうございます。以下の情報を記入してください。
+
+  - type: textarea
+    id: overview
+    attributes:
+      label: 概要・目的
+      description: このバックログアイテムの簡単な説明、プロダクトゴールにどのように貢献するかを記載してください
+      placeholder: このアイテムの目的や背景、ゴールへの貢献を記載してください
+    validations:
+      required: true
+
+  - type: textarea
+    id: tasks
+    attributes:
+      label: タスク
+      description: このアイテムを実現するために必要な具体的なタスクを箇条書きで入力してください
+      placeholder: |
+        例：
+        - API設計の見直し
+        - バリデーションの実装
+        - 単体テストの作成
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 受け入れ基準（達成目標）
+      description: このアイテムが完了したとみなすための基準を箇条書きで入力してください
+      placeholder: |
+        例：
+        - ユーザーが正常にログインできる
+        - 異常系でも適切にエラーメッセージが表示される
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 補足情報
+      description: 必要に応じて追加情報を記載してください（例：関連資料へのリンク、仕様の補足など）
+      placeholder: 関連資料へのリンク、仕様の補足など

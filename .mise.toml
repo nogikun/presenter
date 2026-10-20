@@ -1,0 +1,11 @@
+[tools]
+# node = "20.10"
+# python = "3.11"
+# uv = "0.9.5"
+
+[env]
+# sample_env = "sample_value"
+
+[settings]
+# mise が .envrc と競合しないように設定（推奨）
+experimental = true
