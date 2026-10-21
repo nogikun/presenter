@@ -108,18 +108,51 @@ def player(timeline):
     return template.replace("/*TIMELINE*/null", data)
 
 
-def narrate(config, deck, narration=None, force=False, log=print, checked=None):
-    """Synthesize what changed, then rewrite narration.wav, timeline.json and player.html."""
+def voice_name(config):
+    return Path(config["voice"]).stem if config.get("voice") else "default"
+
+
+def voice_outputs(narration):
+    """Every voice that has audio: the main narration first, then each voices/<name>/ folder.
+    Timeline paths are relative to the narration folder, where player.html lives."""
+    narration = Path(narration)
+    found = []
+    if (narration / "timeline.json").is_file():
+        main = read_json(narration / "timeline.json")
+        found.append({"name": main.get("voice", "default"), "timeline": "timeline.json",
+                      **({"video": main["video"]} if main.get("video") else {})})
+    for path in sorted((narration / "voices").glob("*/timeline.json")):
+        if all(v["name"] != path.parent.name for v in found):
+            found.append({"name": path.parent.name, "timeline": f"voices/{path.parent.name}/timeline.json"})
+    return found
+
+
+def write_player(narration):
+    """player.html opens with the main narration and carries the other voices' timelines, so even
+    a player opened as a file (which cannot fetch them) can switch voices."""
+    narration = Path(narration)
+    main = read_json(narration / "timeline.json")
+    others = [{**v, "data": read_json(narration / v["timeline"])} if v["timeline"] != "timeline.json" else v
+              for v in voice_outputs(narration)]
+    (narration / "player.html").write_text(player({**main, "voices": others}), encoding="utf-8")
+
+
+def narrate(config, deck, narration=None, force=False, log=print, checked=None, out=None):
+    """Synthesize what changed, then rewrite narration.wav, timeline.json and player.html.
+
+    out: where the audio goes (default: the narration folder). The player switches voices between
+    the main narration and <narration>/voices/<name>/, so each voice keeps its own audio there."""
     deck = Path(deck)
     narration = Path(narration) if narration else deck / "narration"
+    out = Path(out) if out else narration
     slides = plan(deck, narration, checked)
     try:
         slide_urls = [quote(Path(os.path.relpath((deck / slide["file"]).resolve(),
-                                               narration.resolve())).as_posix(), safe="/")
+                                               out.resolve())).as_posix(), safe="/")
                       for slide, _ in slides]
     except ValueError as exc:
         raise AudioError("Deck and narration must be on the same drive for relative slide URLs") from exc
-    audio = narration / "audio"
+    audio = out / "audio"
     audio.mkdir(parents=True, exist_ok=True)
     cache_path = audio / ".cache.json"
     cache = read_json(cache_path) if cache_path.is_file() else {}
@@ -155,9 +188,11 @@ def narrate(config, deck, narration=None, force=False, log=print, checked=None):
                          "audio": f"audio/{wav.name}", "cues": cues,
                          "start": round(start, 3), "end": round(start + length, 3)})
         start += length
-    join([audio / f"{s['id']}.wav" for s, _ in slides], narration / "narration.wav")
-    result = {"title": deck_title(deck), "total_seconds": round(start, 3), "slides": timeline}
-    (narration / "timeline.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n",
-                                             encoding="utf-8")
-    (narration / "player.html").write_text(player(result), encoding="utf-8")
+    join([audio / f"{s['id']}.wav" for s, _ in slides], out / "narration.wav")
+    result = {"title": deck_title(deck), "voice": voice_name(config), "total_seconds": round(start, 3),
+              "slides": timeline}
+    (out / "timeline.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n",
+                                       encoding="utf-8")
+    if (narration / "timeline.json").is_file():
+        write_player(narration)
     return result

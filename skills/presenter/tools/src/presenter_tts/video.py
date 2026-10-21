@@ -10,7 +10,7 @@ import tempfile
 from urllib.parse import quote, unquote
 
 from .audio import AudioError
-from .narrate import player, read_json, seconds
+from .narrate import read_json, seconds, write_player
 
 BROWSERS = ["chrome", "msedge", "google-chrome", "chromium",
             r"C:\Program Files\Google\Chrome\Application\chrome.exe",
@@ -82,5 +82,5 @@ def export(narration, output=None, width=1920, height=1080, fps=30, log=print):
     except ValueError:  # Another drive on Windows.
         timeline["video"] = output.resolve().as_uri()
     (narration / "timeline.json").write_text(json.dumps(timeline, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    (narration / "player.html").write_text(player(timeline), encoding="utf-8")
+    write_player(narration)
     return {"video": str(output), "seconds": round(length, 3), "width": width, "height": height, "fps": fps}
