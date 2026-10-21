@@ -1,17 +1,16 @@
 ---
 name: presenter
-description: html-deckで作ったスライドとpresentation-jaで検査した発表原稿から、ローカルのFish Audio S2 Pro（s2.cpp）で解説動画・ナレーション付きスライド用の音声を合成し、スライドごとのWAV、つなげたWAV、タイムライン、スライドと音声を同期して再生できるplayer.htmlを作る。「スライドに音声を付けて」「発表原稿を読み上げて」「ナレーションを作って」「解説動画の音声」「自分の声で読ませたい」「声をクローンして登録」と言われたら、音声合成という語がなくても使う。入力した文章をその場で読ませる、SSML原稿のWAV化、OpenAI互換の音声API、TTSサーバーの起動・停止、ローカルデータの片付けにも使う。原稿の執筆はpresentation-ja、スライド作成はhtml-deck、初回の環境構築はpresenter-setupが担当する。
+description: html-deckのスライドとpresentation-jaの検査済み原稿から、ローカルのFish Audio S2 Pro（s2.cpp）で音声を作り、スライド一覧と文字起こしの付いたplayer.html（原稿の文を選んでそこから聞ける）と、スライドと音声を合わせたMP4を書き出す。「スライドに音声を付けて」「発表原稿を読み上げて」「ナレーションを作って」「解説動画をMP4にして」「YouTubeのようなプレーヤー」「原稿から聞きたい箇所を選びたい」「自分の声で読ませたい」「声をクローンして登録」で使う。文章の読み上げ、SSMLのWAV化、OpenAI互換の音声API、サーバー管理、片付けにも対応する。原稿はpresentation-ja、スライドはhtml-deck、初回の環境構築はpresenter-setupが担当する。
 license: MIT
 compatibility: Windows 10/11とNVIDIA GPU（VRAM 6 GB以上、CUDA Toolkit 12.4以上）、uv、FFmpeg/FFplayが必要。初回はpresenter-setupスキルでs2.cppのビルドとモデル（約3.6 GB）の取得を行う（ネットワーク接続が必要）。合成自体はローカルで完結する。s2.cppとモデルはFish Audio Research License（非商用）。
 ---
 
 # presenter
 
-スライドと発表原稿を、聞ける形（音声とプレーヤー）にする。
-動画の書き出しはこのスキルの範囲外で、そのための音声とタイムラインまでを作る。
+スライドと発表原稿を、聞ける形（音声とプレーヤー）と見られる形（MP4）にする。
 
 ```
-html-deck（スライド） → presentation-ja（原稿の作成と検査） → presenter（音声とプレーヤー）
+html-deck（スライド） → presentation-ja（原稿の作成と検査） → presenter（音声・プレーヤー・MP4）
 ```
 
 コードは同梱の`tools/`（uvのプロジェクト、パッケージ名`presenter_tts`）にある。
@@ -45,7 +44,7 @@ TTSサーバーは`narrate`・`say`・`speak`・`api`が必要なときに自動
 | `<deck>/narration/checked/receipt.json` | presentation-ja（`presentation_check.py check`） |
 
 足りなければ、ここで原稿を書かない。presentation-jaに渡す（スライドがなければhtml-deckから）。
-原稿の正しさや聞きやすさはpresentation-jaの検査と評価が担当し、このスキルは合成だけを担当する。
+原稿の正しさや聞きやすさはpresentation-jaの検査と評価が担当し、このスキルは音声化と再生・動画出力への受け渡しを担当する。
 音声化の前に、presentation-jaの`verify`を通しておくと、検査後に原稿が変わっていないことも確かめられる。
 
 ### 合成する
@@ -53,6 +52,10 @@ TTSサーバーは`narrate`・`say`・`speak`・`api`が必要なときに自動
 ```powershell
 uv run --project "<presenter>/tools" presenter-tts narrate "<deck>"
 ```
+
+再検査の出力先が`checked-v2`などの場合は、`--checked "<deck>/narration/checked-v2"`を付けて、その検査結果を指定する。
+原稿のフォルダも違う場合は、`--narration "<原稿のフォルダ>"`を付ける。音声とプレーヤーはそのフォルダへ出力される。
+スライドを相対URLで参照するため、Windowsではデッキと原稿のフォルダを同じドライブに置く。
 
 - 原稿・マップ・スライドのHTMLが、presentation-jaが検査したときと一致しなければ止まる。そのときはpresentation-jaでマップの同期と`check`/`verify`をやり直す。ハッシュだけを書き換えて通さない。
 - 声は設定の既定の声を使う。別の声なら`--voice <名前>`。声の候補は`voice list`で確かめる。
@@ -65,12 +68,23 @@ uv run --project "<presenter>/tools" presenter-tts narrate "<deck>"
 
 | ファイル | 用途 |
 |---|---|
-| `player.html` | スライドと音声を同期して再生する。ダブルクリックで開ける。←→でスライド移動 |
+| `player.html` | スライド一覧・再生操作・文字起こしの付いたプレーヤー。文を選ぶとその位置へ移る。ダブルクリックで開ける |
 | `narration.wav` | 全スライドをつなげた音声。動画編集にそのまま使える |
-| `timeline.json` | スライドごとの開始・終了秒。動画のカット位置に使える |
+| `timeline.json` | スライドごとの開始・終了秒と、文ごとの実測の開始・終了秒（`cues`） |
 | `audio/<スライドID>.wav` | スライドごとの音声 |
+| `audio/<スライドID>.json` | 合成の記録（文ごとの開始・終了フレーム、速度） |
 
-渡す前に`player.html`を開き（`Invoke-Item`）、最初と最後のスライド、長いスライドを少なくとも聞く。
+動画（MP4）を求められたら、`narrate`の後に書き出す。ChromeかEdge（スライドの撮影）とFFmpegを使う。
+
+```powershell
+uv run --project "<presenter>/tools" presenter-tts video "<deck>"
+```
+
+`<narration>/presentation.mp4`（1920×1080、30fps、H.264/AAC）ができ、`player.html`に「MP4 を保存」が出る。
+音声の長さとずれた動画や、映像か音声が欠けた動画は書き出さずにエラーにする。`narrate`をやり直したら`video`も実行し直す。
+プレーヤーの操作とMP4の詳細は[プレーヤーとMP4](references/playback-video.md)にある。
+
+渡す前に`player.html`をブラウザで開き、最初と最後のスライド、長いスライドを少なくとも聞く。
 読み間違い（数字・英字・固有名詞）、不自然な切れ目、音量の差を見つけたら、原稿側の表記を直してpresentation-jaで再検査し、`narrate`をもう一度実行する（直したスライドだけ作り直される）。
 返すときは、ファイルの場所、合計の長さ、使った声、聞いて確かめた範囲と、まだ聞いていない範囲を伝える。
 
@@ -116,5 +130,6 @@ uv run --project "<presenter>/tools" presenter-tts voice list
 | `references/commands.md` | 全コマンドと設定の一覧 | `say`・`speak`・`api`・設定を使うとき |
 | `references/engine.md` | エンジンの仕組み、SSMLの対応範囲、検証結果、遅いときの調べ方 | SSMLや速度の問題を扱うとき |
 | `references/cleanup.md` | ローカルデータの片付け手順 | 片付け・アンインストール |
+| `references/playback-video.md` | プレーヤーの画面と操作、文字起こしの時刻、MP4の書き出しと確かめ方 | プレーヤーやMP4について聞かれたとき・動画を渡すとき |
 | `tools/` | presenter-tts本体（`src/presenter_tts`）、テスト、`presenter.example.toml` | 実行・改修 |
 | `tools/scripts/` | s2.cppのビルドとモデル取得（presenter-setupが使う） | セットアップ |

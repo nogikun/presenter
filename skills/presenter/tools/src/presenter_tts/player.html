@@ -3,87 +3,775 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>Narrated deck</title>
+<script>
+  // Apply the saved theme before first paint so the page does not flash.
+  try { const saved = localStorage.getItem("presenter-theme"); if (saved) document.documentElement.dataset.theme = saved; } catch {}
+</script>
 <style>
-  :root { --bg: #111317; --bar: #1c1f25; --text: #e8eaee; --muted: #9aa1ad; --accent: #5aa9ff; }
+  /* Layout and type follow Apple's HIG (Liquid Glass: floating translucent layers, specular edges,
+     concentric corners); state layers, color roles and the filter chip follow Material 3. */
+
+  /* Palette: Microsoft PowerPoint's warm oranges. Every accent below comes from these four, so a new
+     pattern is a new set of four. Gradients turn at 38.2% (golden ratio), tints are 1/φ powers
+     (14.6%, 23.6%), and geometry uses Fibonacci steps (5, 8, 13, 21, 34) so nested corners stay
+     concentric (21 − 8 = 13). The background stays neutral; color is kept for what people act on. */
+  :root {
+    --pp-deep: #c43e1c; --pp-strong: #d35230; --pp-bright: #ed6c47; --pp-light: #ff8f6b;
+    /* White text stays above 4.5:1 on this one, so it carries labels (buttons, current time). */
+    --brand: linear-gradient(135deg in oklch, var(--pp-deep), 38.2%, var(--pp-strong));
+    /* Decoration only: progress, the current slide's ring. */
+    --brand-glow: linear-gradient(90deg in oklch, var(--pp-deep), 38.2%, var(--pp-light));
+    --s1: 5px; --s2: 8px; --s3: 13px; --s4: 21px; --s5: 34px;
+    --r-pane: 21px; --r-item: 13px; --r-small: 8px;
+
+    --bg: #f5f5f7;
+    --glass: rgba(255, 255, 255, .62); --glass-strong: rgba(255, 255, 255, .82); --field: rgba(118, 118, 128, .12);
+    --edge: rgba(255, 255, 255, .8); --hairline: rgba(0, 0, 0, .08); --lift: 0 1px 2px rgba(0, 0, 0, .04), 0 8px 34px rgba(0, 0, 0, .07);
+    --on-surface: #1d1d1f; --on-surface-variant: #6e6e73;
+    --primary: var(--pp-deep); --on-primary: #fff;
+    --primary-container: color-mix(in oklch, var(--pp-bright) 14.6%, transparent); --on-primary-container: #9e2f12;
+    --mark: rgba(255, 204, 0, .45);
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e0e10;
+    --glass: rgba(36, 36, 40, .62); --glass-strong: rgba(46, 46, 50, .85); --field: rgba(118, 118, 128, .24);
+    --edge: rgba(255, 255, 255, .12); --hairline: rgba(255, 255, 255, .08); --lift: 0 8px 34px rgba(0, 0, 0, .5);
+    --on-surface: #f5f5f7; --on-surface-variant: #a1a1a6;
+    --primary: var(--pp-light); --on-primary: #3a0f02;
+    --primary-container: color-mix(in oklch, var(--pp-bright) 23.6%, transparent); --on-primary-container: #ffc7b3;
+    --mark: rgba(255, 214, 10, .35);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e0e10;
+      --glass: rgba(36, 36, 40, .62); --glass-strong: rgba(46, 46, 50, .85); --field: rgba(118, 118, 128, .24);
+      --edge: rgba(255, 255, 255, .12); --hairline: rgba(255, 255, 255, .08); --lift: 0 8px 34px rgba(0, 0, 0, .5);
+      --on-surface: #f5f5f7; --on-surface-variant: #a1a1a6;
+      --primary: var(--pp-light); --on-primary: #3a0f02;
+      --primary-container: color-mix(in oklch, var(--pp-bright) 23.6%, transparent); --on-primary-container: #ffc7b3;
+      --mark: rgba(255, 214, 10, .35);
+    }
+  }
+
   * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
-  body { display: flex; flex-direction: column; background: var(--bg); color: var(--text);
-         font: 15px/1.4 system-ui, "Yu Gothic UI", "Hiragino Sans", sans-serif; }
-  #stage { flex: 1; position: relative; overflow: hidden; }
-  /* html-deck slides are a fixed 1600x900 canvas; scale the whole frame to fit the window. */
-  #slide { position: absolute; left: 50%; top: 50%; width: 1600px; height: 900px; border: 0;
-           background: #fff; transform-origin: center; }
-  #bar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: var(--bar); }
-  #bar button { min-width: 44px; min-height: 36px; border: 1px solid #39404b; border-radius: 6px;
-                background: transparent; color: var(--text); font: inherit; cursor: pointer; }
-  #bar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  #label { min-width: 0; flex: 0 1 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #label b { color: var(--accent); font-weight: 600; margin-right: 8px; }
-  audio { flex: 1; min-width: 200px; }
-  #help { color: var(--muted); font-size: 13px; white-space: nowrap; }
-  @media (max-width: 640px) { #help { display: none; } }
+  html, body { margin: 0; }
+  body {
+    color: var(--on-surface); -webkit-font-smoothing: antialiased;
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+          "Yu Gothic UI", "Segoe UI", Meiryo, system-ui, sans-serif;
+    background: var(--bg);
+    /* The app fills the window: header on top, panes stretched to the bottom edge. */
+    height: 100vh; height: 100dvh; display: grid; grid-template-rows: auto minmax(0, 1fr); overflow: hidden;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+
+  /* Liquid Glass surface: translucent fill, blur, a bright top edge and a soft lift. */
+  .glass {
+    background: var(--glass); border: 1px solid var(--edge);
+    backdrop-filter: blur(34px) saturate(180%); -webkit-backdrop-filter: blur(34px) saturate(180%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), inset 0 -1px 0 rgba(255, 255, 255, .06), var(--lift);
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .glass { background: var(--glass-strong); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  }
+
+  /* Material 3 state layer: an overlay of the content color at 8% (hover) / 10% (focus, pressed). */
+  .state { position: relative; isolation: isolate; cursor: pointer; }
+  .state::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+                   background: currentColor; opacity: 0; transition: opacity .15s; pointer-events: none; }
+  .state:hover::before { opacity: .08; }
+  .state:focus-visible::before, .state:active::before { opacity: .10; }
+
+  /* Toolbar: a floating glass capsule. */
+  header { position: relative; z-index: 5; display: flex; align-items: center; gap: var(--s3);
+           margin: var(--s3) var(--s4) 0; padding: var(--s2) var(--s2) var(--s2) var(--s4); border-radius: 999px; }
+  header h1 { flex: 1; min-width: 0; margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em;
+              overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .segmented { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--field); }
+  .segmented button { display: inline-grid; place-items: center; width: 34px; height: 30px; padding: 0; border: 0;
+                      border-radius: 999px; background: none; color: var(--on-surface-variant); }
+  .segmented button[aria-pressed="true"] { background: var(--glass-strong); color: var(--on-surface);
+                                           box-shadow: 0 1px 4px rgba(0, 0, 0, .15), inset 0 1px 0 var(--edge); }
+  .segmented svg { width: 18px; height: 18px; }
+  .pane-toggle { display: inline-grid; place-items: center; flex: none; width: 34px; height: 34px; padding: 0; border: 0;
+                 border-radius: 50%; background: none; color: var(--on-surface-variant); }
+  .pane-toggle svg { width: 20px; height: 20px; }
+  .pane-toggle[aria-expanded="false"] { color: var(--on-surface); background: var(--field); }
+  .prominent { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 var(--s4); border-radius: 999px;
+               background: var(--primary); background: var(--brand); color: #fff; font-size: 14px; font-weight: 600;
+               text-decoration: none; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35),
+               0 4px 13px color-mix(in oklch, var(--pp-deep) 38.2%, transparent); }
+  .prominent svg { width: 16px; height: 16px; }
+
+  /* Golden columns: 233 : main : 377 (Fibonacci). Either side pane can be closed (hidden). */
+  .layout { display: grid; grid-template-areas: "rail main side"; grid-template-columns: 233px minmax(0, 1fr) 377px;
+            gap: var(--s4); padding: var(--s4); min-height: 0; }
+  .layout:has(> .rail[hidden]) { grid-template-areas: "main side"; grid-template-columns: minmax(0, 1fr) 377px; }
+  .layout:has(> .side[hidden]) { grid-template-areas: "rail main"; grid-template-columns: 233px minmax(0, 1fr); }
+  .layout:has(> .rail[hidden]):has(> .side[hidden]) { grid-template-areas: "main"; grid-template-columns: minmax(0, 1fr); }
+  .rail { grid-area: rail; } .player { grid-area: main; } .side { grid-area: side; }
+  .rail[hidden], .side[hidden] { display: none; }
+  .rail, .side { min-height: 0; border-radius: var(--r-pane); }
+
+  /* Slide list, like PowerPoint's thumbnail pane, on a glass sidebar. */
+  .rail { overflow-y: auto; padding: var(--s2); }
+  .rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s1); }
+  .thumb { display: grid; grid-template-columns: 18px 1fr; gap: var(--s1) var(--s2); width: 100%; padding: var(--s1);
+           border: 0; border-radius: var(--r-item); background: none; text-align: left; }
+  .thumb .n { padding-top: 2px; font-size: 12px; color: var(--on-surface-variant); text-align: right; font-variant-numeric: tabular-nums; }
+  .thumb .pic { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: var(--r-small);
+                border: 2px solid transparent; background: linear-gradient(#fff, #fff) padding-box, var(--hairline) border-box;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, .08); }
+  .thumb .pic iframe { position: absolute; left: 0; top: 0; width: 1600px; height: 900px; border: 0;
+                       transform-origin: 0 0; transform: scale(var(--thumb-scale, .1)); pointer-events: none; }
+  .thumb .cap { grid-column: 2; font-size: 12px; line-height: 1.35; color: var(--on-surface-variant);
+                display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .thumb[aria-current="true"] { background: var(--primary-container); }
+  .thumb[aria-current="true"] .pic { background: linear-gradient(#fff, #fff) padding-box, var(--brand-glow) border-box;
+                                     box-shadow: 0 4px 13px rgba(0, 0, 0, .15); }
+  .thumb[aria-current="true"] .n, .thumb[aria-current="true"] .cap { color: var(--on-primary-container); font-weight: 600; }
+
+  /* Stage: the largest 16:9 screen that fits the column, centered; controls float on it in glass. */
+  .player { min-width: 0; min-height: 0; container-type: size; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; --now-h: 76px; }
+  .screen { position: relative; width: min(100cqw, (100cqh - var(--now-h)) * 16 / 9); border-radius: var(--r-pane);
+            overflow: hidden; background: #000; box-shadow: 0 0 0 1px var(--hairline), var(--lift); }
+  .stage { position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: #000; }
+  /* html-deck slides are a fixed 1600x900 canvas; scale the whole frame to fit. */
+  .stage iframe { position: absolute; left: 50%; top: 50%; width: 1600px; height: 900px; border: 0; background: #fff;
+                  transform-origin: center; }
+  .catcher { position: absolute; inset: 0; }
+  .screen:fullscreen { display: grid; border-radius: 0; }
+  .screen:fullscreen .stage { aspect-ratio: auto; height: 100vh; }
+  /* "Fill the window" mode: the screen covers the page; monitor fullscreen uses the Fullscreen API. */
+  .screen.filled { position: fixed; inset: 0; z-index: 50; width: auto; border-radius: 0; box-shadow: none; }
+  .screen.filled .stage { aspect-ratio: auto; height: 100vh; }
+  /* The player's size container is its own stacking context; lift it above the side panes. */
+  .player:has(.screen.filled) { position: relative; z-index: 50; }
+  .screen.idle { cursor: none; }
+  .controls { position: absolute; left: var(--s2); right: var(--s2); bottom: var(--s2); padding: var(--s1) var(--s3);
+              border-radius: var(--r-item); color: #fff; transition: opacity .3s, transform .3s; }
+  .controls.glass { background: rgba(30, 30, 34, .42); border-color: rgba(255, 255, 255, .18); }
+  .screen.idle .controls { opacity: 0; transform: translateY(var(--s2)); pointer-events: none; }
+
+  .seek { position: relative; height: 21px; margin: 0 var(--s1); }
+  .seek .ticks { position: absolute; left: 0; right: 0; top: 50%; height: 6px; margin-top: -3px; pointer-events: none; z-index: 1; }
+  .seek .ticks i { position: absolute; top: 0; width: 3px; height: 6px; margin-left: -1.5px; background: rgba(30, 30, 34, .9); }
+  /* Progress fills with the warm gradient; the rest of the track stays a neutral gray. */
+  input[type="range"] { -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 21px; margin: 0;
+                        background: none; cursor: pointer; }
+  input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; transition: height .15s;
+    background: linear-gradient(to right, transparent var(--p, 0%), #66666c var(--p, 0%)),
+                var(--brand-glow); }
+  .seek:hover input[type="range"]::-webkit-slider-runnable-track { height: 6px; }
+  input[type="range"]::-moz-range-track { height: 4px; border-radius: 2px; background: #66666c; }
+  input[type="range"]::-moz-range-progress { height: 4px; border-radius: 2px;
+    background: var(--brand-glow); }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; margin-top: -4.5px;
+    border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .45); transition: transform .15s; }
+  .seek:hover input[type="range"]::-webkit-slider-thumb { margin-top: -3.5px; transform: scale(1.236); }
+  input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border: 0; border-radius: 50%; background: #fff; }
+
+  /* Scrubbing preview (HIG: show a 160px thumbnail while people look for a moment). */
+  .preview { position: absolute; bottom: 29px; width: 176px; padding: var(--s2); border-radius: var(--r-item);
+             transform: translateX(-50%); pointer-events: none; opacity: 0; transition: opacity .15s; }
+  .preview.glass { background: rgba(30, 30, 34, .55); border-color: rgba(255, 255, 255, .2); }
+  .preview.show { opacity: 1; }
+  .preview .pic { position: relative; width: 160px; height: 90px; overflow: hidden; border-radius: var(--s1); background: #fff; }
+  .preview iframe { position: absolute; left: 0; top: 0; width: 1600px; height: 900px; border: 0; transform-origin: 0 0; transform: scale(.1); }
+  .preview .meta { display: flex; gap: 6px; margin-top: 6px; font-size: 12px; line-height: 1.3; }
+  .preview .meta b { font-variant-numeric: tabular-nums; }
+  .preview .meta span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: .8; }
+
+  .row { display: flex; align-items: center; gap: 2px; }
+  .icon { display: inline-grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%;
+          background: none; color: inherit; }
+  .icon svg { width: 21px; height: 21px; }
+  .icon.big { width: 44px; height: 44px; }
+  .icon.big svg { width: 28px; height: 28px; }
+  .time { margin: 0 var(--s2); font-size: 13px; font-variant-numeric: tabular-nums; color: rgba(255, 255, 255, .85); white-space: nowrap; }
+  .spacer { flex: 1; }
+  .volume { display: flex; align-items: center; }
+  .volume input { width: 0; opacity: 0; transition: width .2s, opacity .2s; }
+  .volume:hover input, .volume:focus-within input { width: 89px; opacity: 1; margin-right: 6px; }
+  .rate { height: 30px; padding: 0 var(--s3); border: 0; border-radius: 999px; background: rgba(255, 255, 255, .16); color: #fff;
+          font-size: 13px; font-variant-numeric: tabular-nums; }
+  .rate option { color: initial; }
+  .full-wrap { position: relative; }
+  .menu { position: absolute; right: 0; bottom: 48px; z-index: 2; min-width: 233px; margin: 0; padding: var(--s1); list-style: none;
+          border-radius: var(--r-item); color: #fff; }
+  .menu.glass { background: rgba(30, 30, 34, .62); border-color: rgba(255, 255, 255, .2); }
+  .menu button { display: flex; align-items: center; gap: var(--s2); width: 100%; height: 40px; padding: 0 var(--s3); border: 0;
+                 border-radius: var(--r-small); background: none; font-size: 14px; text-align: left; }
+  .menu svg { width: 18px; height: 18px; flex: none; }
+  .menu kbd { margin-left: auto; padding: 1px 6px; border-radius: 5px; background: rgba(255, 255, 255, .16);
+              font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+  /* Title under the screen, as wide as the screen, one line so the height budget (--now-h) holds. */
+  .now { width: min(100cqw, (100cqh - var(--now-h)) * 16 / 9); height: var(--now-h); padding: var(--s3) var(--s1) 0; }
+  .now .eyebrow { font-size: 13px; font-weight: 500; color: var(--on-surface-variant); font-variant-numeric: tabular-nums; }
+  .now h2 { margin: 2px 0 0; font-size: 24px; line-height: 1.25; font-weight: 700; letter-spacing: -.02em;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Transcript, like YouTube's, on a glass pane. */
+  .side { display: flex; flex-direction: column; overflow: hidden; }
+  .side-head { padding: var(--s4) var(--s4) var(--s3); }
+  .side-head h2 { margin: 0 0 var(--s3); font-size: 19px; font-weight: 700; letter-spacing: -.01em; }
+  .search { display: flex; align-items: center; gap: 6px; height: 38px; padding: 0 var(--s3); border-radius: var(--r-item); background: var(--field); }
+  .search svg { width: 16px; height: 16px; flex: none; color: var(--on-surface-variant); }
+  .search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; outline: none; }
+  .search:focus-within { outline: 3px solid var(--primary); outline-offset: 1px; }
+  .search input::placeholder { color: var(--on-surface-variant); }
+  .opts { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); margin-top: var(--s3); }
+  /* Material 3 filter chip. */
+  .chip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 var(--s3) 0 var(--s2); border-radius: var(--r-small);
+          border: 1px solid var(--hairline); background: none; font-size: 13px; font-weight: 500; color: var(--on-surface-variant); }
+  .chip svg { width: 16px; height: 16px; }
+  .chip[aria-pressed="true"] { border-color: transparent; background: var(--primary-container); color: var(--on-primary-container); }
+  .chip[aria-pressed="false"] svg { display: none; }
+  .chip[aria-pressed="false"] { padding-left: var(--s3); }
+  .text-button { height: 32px; padding: 0 var(--s3); border: 0; border-radius: 999px; background: none; color: var(--primary);
+                 font-size: 13px; font-weight: 600; }
+  .cues { flex: 1; overflow-y: auto; list-style: none; margin: 0; padding: var(--s1) var(--s2) var(--s3);
+          border-top: 1px solid var(--hairline); }
+  .chapter { position: sticky; top: 0; z-index: 1; display: flex; gap: var(--s2); align-items: baseline; margin: var(--s1) calc(-1 * var(--s2)) 2px;
+             padding: var(--s2) var(--s4); font-size: 12px; font-weight: 600; letter-spacing: .02em; color: var(--on-surface-variant);
+             background: var(--glass-strong); backdrop-filter: blur(21px); -webkit-backdrop-filter: blur(21px); }
+  .chapter span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cue { display: grid; grid-template-columns: auto 1fr; gap: var(--s3); align-items: start; padding: var(--s2) var(--s3);
+         border-radius: var(--r-item); cursor: default; }
+  .cue:hover { background: color-mix(in srgb, var(--on-surface) 5%, transparent); }
+  .cue .ts { min-width: 50px; height: 26px; padding: 0 var(--s2); border: 0; border-radius: 999px; background: var(--field);
+             color: var(--primary); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .cue p { margin: 0; cursor: text; user-select: text; color: var(--on-surface-variant); transition: color .2s; }
+  .cue[aria-current="true"] { background: var(--primary-container); }
+  .cue[aria-current="true"] p { color: var(--on-surface); font-weight: 600; }
+  .cue[aria-current="true"] .ts { background: var(--pp-deep); background: var(--brand); color: #fff; }
+  .cue mark { background: var(--mark); color: inherit; border-radius: 3px; }
+  .empty { padding: var(--s5) var(--s4); color: var(--on-surface-variant); text-align: center; }
+
+  /* Medium windows: the slide list becomes a filmstrip under the screen. */
+  @media (max-width: 1180px) {
+    .layout { grid-template-areas: "main side" "rail side"; grid-template-columns: minmax(0, 1fr) 340px;
+              grid-template-rows: minmax(0, 1fr) auto; }
+    .layout:has(> .rail[hidden]) { grid-template-areas: "main side"; grid-template-columns: minmax(0, 1fr) 340px;
+                                   grid-template-rows: minmax(0, 1fr); }
+    .layout:has(> .side[hidden]) { grid-template-areas: "main" "rail"; grid-template-columns: minmax(0, 1fr); }
+    .layout:has(> .rail[hidden]):has(> .side[hidden]) { grid-template-areas: "main"; grid-template-rows: minmax(0, 1fr); }
+    .rail { overflow-x: auto; overflow-y: hidden; }
+    .rail ol { grid-auto-flow: column; grid-auto-columns: 144px; }
+  }
+  /* Phones: an ordinary scrolling page, one column. */
+  @media (max-width: 760px) {
+    body { height: auto; display: block; overflow: visible; }
+    header { position: sticky; top: var(--s2); margin: var(--s2) var(--s2) 0; padding-left: var(--s3); }
+    header h1 { font-size: 15px; }
+    header { gap: var(--s2); padding-left: var(--s2); }
+    .prominent span { display: none; }
+    .prominent { padding: 0 var(--s3); }
+    .layout, .layout:has(> .rail[hidden]), .layout:has(> .side[hidden]), .layout:has(> .rail[hidden]):has(> .side[hidden]) {
+      grid-template-areas: none; grid-template-columns: minmax(0, 1fr); grid-template-rows: none;
+      gap: var(--s3); padding: var(--s3) var(--s3) var(--s4); }
+    .rail, .player, .side { grid-area: auto; }
+    .player { order: -1; container-type: normal; display: block; }
+    .side { max-height: 70vh; }
+    .screen, .now { width: auto; }
+    .now { height: auto; }
+    .now h2 { font-size: 19px; white-space: normal; }
+    .rail ol { grid-auto-columns: 144px; }
+    .skip, .volume input { display: none; }
+    .screen { border-radius: var(--r-item); }
+    /* Floating controls would cover most of a phone-sized slide; dock them under it instead. */
+    .controls { position: static; border-radius: 0; border-width: 1px 0 0; }
+    .screen.idle .controls { opacity: 1; transform: none; pointer-events: auto; }
+    .screen.idle { cursor: auto; }
+  }
+  /* Lucide icons are 24px outlines drawn with a 2px stroke; transport glyphs are filled. */
+  svg.i { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  svg.i.solid { fill: currentColor; }
+  svg.i text { fill: currentColor; stroke: none; font: 700 7px system-ui, sans-serif; }
+  /* Scrollbars: no track, no arrows, just a thin rounded thumb that shows while the pane is hovered. */
+  ::-webkit-scrollbar { width: 8px; height: 8px; background: transparent; }
+  ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+  ::-webkit-scrollbar-button { display: none; }
+  ::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 999px; background: transparent; background-clip: padding-box; }
+  :hover::-webkit-scrollbar-thumb { background-color: color-mix(in srgb, var(--on-surface) 24%, transparent); }
+  ::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--on-surface) 38%, transparent); }
+  @supports not selector(::-webkit-scrollbar) {
+    * { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--on-surface) 24%, transparent) transparent; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
 </style>
 </head>
 <body>
-<main id="stage"><iframe id="slide" title="スライド"></iframe></main>
-<nav id="bar" aria-label="再生">
-  <button id="prev" type="button" aria-label="前のスライド">◀</button>
-  <span id="label" aria-live="polite"></span>
-  <button id="next" type="button" aria-label="次のスライド">▶</button>
-  <audio id="audio" controls preload="auto" src="narration.wav"></audio>
-  <span id="help">Space: 再生/停止 ・ ←→: スライド移動</span>
-</nav>
+<!--
+  Icons: Lucide v1.49.0 (https://lucide.dev)
+
+  ISC License
+
+  Copyright (c) 2026 Lucide Icons and Contributors
+
+  Permission to use, copy, modify, and/or distribute this software for any
+  purpose with or without fee is hereby granted, provided that the above
+  copyright notice and this permission notice appear in all copies.
+
+  THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+  WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+  MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+  ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+  ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+  check, download, maximize, minimize, monitor, moon and search are derived from Feather:
+
+  The MIT License (MIT)
+
+  Copyright (c) 2013-present Cole Bemis
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+-->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-app-window" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/> <path d="M10 4v4"/> <path d="M2 8h20"/> <path d="M6 4v4"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 15V3"/> <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/> <path d="m7 10 5 5 5-5"/></symbol>
+  <symbol id="i-maximize" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/> <path d="M21 8V5a2 2 0 0 0-2-2h-3"/> <path d="M3 16v3a2 2 0 0 0 2 2h3"/> <path d="M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
+  <symbol id="i-minimize" viewBox="0 0 24 24"><path d="M8 3v3a2 2 0 0 1-2 2H3"/> <path d="M21 8h-3a2 2 0 0 1-2-2V3"/> <path d="M3 16h3a2 2 0 0 1 2 2v3"/> <path d="M16 21v-3a2 2 0 0 1 2-2h3"/></symbol>
+  <symbol id="i-monitor" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"/> <line x1="8" x2="16" y1="21" y2="21"/> <line x1="12" x2="12" y1="17" y2="21"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="14" y="3" width="5" height="18" rx="1"/> <rect x="5" y="3" width="5" height="18" rx="1"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></symbol>
+  <symbol id="i-rotate-ccw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/> <path d="M3 3v5h5"/></symbol>
+  <symbol id="i-rotate-cw" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/> <path d="M21 3v5h-5"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/> <circle cx="11" cy="11" r="8"/></symbol>
+  <symbol id="i-skip-back" viewBox="0 0 24 24"><path d="M17.971 4.285A2 2 0 0 1 21 6v12a2 2 0 0 1-3.029 1.715l-9.997-5.998a2 2 0 0 1-.003-3.432z"/> <path d="M3 20V4"/></symbol>
+  <symbol id="i-skip-forward" viewBox="0 0 24 24"><path d="M21 4v16"/> <path d="M6.029 4.285A2 2 0 0 0 3 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z"/></symbol>
+  <symbol id="i-sun-moon" viewBox="0 0 24 24"><path d="M12 2v2"/> <path d="M14.837 16.385a6 6 0 1 1-7.223-7.222c.624-.147.97.66.715 1.248a4 4 0 0 0 5.26 5.259c.589-.255 1.396.09 1.248.715"/> <path d="M16 12a4 4 0 0 0-4-4"/> <path d="m19 5-1.256 1.256"/> <path d="M20 12h2"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/> <path d="M12 2v2"/> <path d="M12 20v2"/> <path d="m4.93 4.93 1.41 1.41"/> <path d="m17.66 17.66 1.41 1.41"/> <path d="M2 12h2"/> <path d="M20 12h2"/> <path d="m6.34 17.66-1.41 1.41"/> <path d="m19.07 4.93-1.41 1.41"/></symbol>
+  <symbol id="i-volume-2" viewBox="0 0 24 24"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/> <path d="M16 9a5 5 0 0 1 0 6"/> <path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></symbol>
+  <symbol id="i-volume-x" viewBox="0 0 24 24"><path d="M11 4.702a.7.7 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.7.7 0 0 0 11 19.298z"/> <path d="m16.5 14.5 5-5"/> <path d="m16.5 9.5 5 5"/></symbol>
+  <symbol id="i-panel-left-close" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/> <path d="M9 3v18"/> <path d="m16 15-3-3 3-3"/></symbol>
+  <symbol id="i-panel-left-open" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/> <path d="M9 3v18"/> <path d="m14 9 3 3-3 3"/></symbol>
+  <symbol id="i-panel-right-close" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/> <path d="M15 3v18"/> <path d="m8 9 3 3-3 3"/></symbol>
+  <symbol id="i-panel-right-open" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/> <path d="M15 3v18"/> <path d="m10 15-3-3 3-3"/></symbol>
+</svg>
+<header class="glass">
+  <button class="pane-toggle state" id="toggle-rail" type="button" aria-controls="rail" aria-expanded="true"
+          aria-label="スライド一覧を閉じる" title="スライド一覧">
+    <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use id="rail-icon" href="#i-panel-left-close"/></svg></button>
+  <h1 id="deck-title"></h1>
+  <button class="pane-toggle state" id="toggle-side" type="button" aria-controls="side" aria-expanded="true"
+          aria-label="文字起こしを閉じる" title="文字起こし">
+    <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use id="side-icon" href="#i-panel-right-close"/></svg></button>
+  <div class="segmented" role="group" aria-label="外観">
+    <button class="state" type="button" data-theme-choice="system" aria-label="システムに合わせる" title="システム">
+      <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sun-moon"/></svg></button>
+    <button class="state" type="button" data-theme-choice="light" aria-label="ライト" title="ライト">
+      <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sun"/></svg></button>
+    <button class="state" type="button" data-theme-choice="dark" aria-label="ダーク" title="ダーク">
+      <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-moon"/></svg></button>
+  </div>
+  <a id="mp4" class="prominent" hidden download>
+    <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-download"/></svg><span>MP4 を保存</span></a>
+</header>
+
+<div class="layout">
+  <nav class="rail glass" id="rail" aria-label="スライド一覧"><ol id="thumbs"></ol></nav>
+
+  <main class="player">
+    <div class="screen" id="screen">
+      <div class="stage" id="stage">
+        <iframe id="slide" title="スライド" tabindex="-1"></iframe>
+        <div class="catcher" id="catcher" aria-hidden="true"></div>
+      </div>
+      <div class="controls glass" id="controls">
+        <div class="seek" id="seek-wrap">
+          <div class="ticks" id="ticks"></div>
+          <input id="seek" type="range" min="0" step="0.1" value="0" aria-label="再生位置">
+          <div class="preview glass" id="preview" aria-hidden="true">
+            <div class="pic"><iframe id="preview-frame" tabindex="-1" title=""></iframe></div>
+            <div class="meta"><b id="preview-time"></b><span id="preview-title"></span></div>
+          </div>
+        </div>
+        <div class="row">
+          <button class="icon big state" id="play" type="button" aria-label="再生">
+            <svg class="i solid" viewBox="0 0 24 24" aria-hidden="true"><use id="play-icon" href="#i-play"/></svg></button>
+          <button class="icon skip state" id="back" type="button" aria-label="10秒戻る">
+            <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-rotate-ccw"/><text x="12" y="14.5" text-anchor="middle">10</text></svg></button>
+          <button class="icon skip state" id="fwd" type="button" aria-label="10秒進む">
+            <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-rotate-cw"/><text x="12" y="14.5" text-anchor="middle">10</text></svg></button>
+          <span class="volume">
+            <button class="icon state" id="mute" type="button" aria-label="ミュート">
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use id="vol-icon" href="#i-volume-2"/></svg></button>
+            <input id="volume" type="range" min="0" max="1" step="0.05" value="1" aria-label="音量">
+          </span>
+          <span class="time" id="time">0:00 / 0:00</span>
+          <span class="spacer"></span>
+          <button class="icon state" id="prev" type="button" aria-label="前のスライド">
+            <svg class="i solid" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-skip-back"/></svg></button>
+          <button class="icon state" id="next" type="button" aria-label="次のスライド">
+            <svg class="i solid" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-skip-forward"/></svg></button>
+          <select class="rate state" id="rate" aria-label="再生速度">
+            <option value="0.75">0.75×</option><option value="1" selected>1×</option>
+            <option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2×</option>
+          </select>
+          <span class="full-wrap">
+            <button class="icon state" id="full" type="button" aria-label="全画面" aria-haspopup="menu" aria-expanded="false" aria-controls="full-menu">
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use id="full-icon" href="#i-maximize"/></svg></button>
+            <ul class="menu glass" id="full-menu" role="menu" aria-label="全画面の種類" hidden>
+              <li role="none"><button class="state" type="button" role="menuitem" id="fill-window">
+                <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-app-window"/></svg>ウィンドウいっぱい<kbd>T</kbd></button></li>
+              <li role="none"><button class="state" type="button" role="menuitem" id="fill-monitor">
+                <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-monitor"/></svg>モニター全体<kbd>F</kbd></button></li>
+            </ul>
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="now" aria-live="polite">
+      <div class="eyebrow" id="now-count"></div>
+      <h2 id="now-title"></h2>
+    </div>
+    <audio id="audio" preload="auto" src="narration.wav"></audio>
+  </main>
+
+  <aside class="side glass" id="side" aria-label="文字起こし">
+    <div class="side-head">
+      <h2>文字起こし</h2>
+      <label class="search">
+        <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg>
+        <input id="search" type="search" placeholder="原稿を検索" aria-label="原稿を検索">
+      </label>
+      <div class="opts">
+        <button class="chip state" id="follow" type="button" aria-pressed="true">
+          <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg>自動スクロール</button>
+        <button class="text-button state" id="to-now" type="button">現在の位置へ</button>
+      </div>
+    </div>
+    <ol class="cues" id="cues"></ol>
+  </aside>
+</div>
 <script>
 const timeline = /*TIMELINE*/null;
 const slides = timeline.slides;
-const stage = document.getElementById("stage");
-const frame = document.getElementById("slide");
-const audio = document.getElementById("audio");
-const label = document.getElementById("label");
-let current = -1;
+const total = timeline.total_seconds;
+const $ = (id) => document.getElementById(id);
+const audio = $("audio"), frame = $("slide"), seek = $("seek"), cueList = $("cues"), screen = $("screen");
+const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+const el = (tag, props = {}, ...children) => { const e = Object.assign(document.createElement(tag), props); e.append(...children); return e; };
+const clock = (t) => { t = Math.max(0, Math.floor(t)); const m = Math.floor(t / 60), s = String(t % 60).padStart(2, "0");
+  return m >= 60 ? `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}:${s}` : `${m}:${s}`; };
+const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
+                set: (k, v) => { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} } };
+const setIcon = (id, name) => $(id).setAttribute("href", `#i-${name}`);
+
+// Appearance: system, light or dark, remembered per browser.
+function setTheme(choice) {
+  if (choice === "system") delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = choice;
+  store.set("presenter-theme", choice === "system" ? null : choice);
+  document.querySelectorAll("[data-theme-choice]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.themeChoice === choice));
+}
+document.querySelectorAll("[data-theme-choice]").forEach((b) => b.addEventListener("click", () => setTheme(b.dataset.themeChoice)));
+setTheme(document.documentElement.dataset.theme || "system");
+
+// Every spoken sentence with its measured start; slides without cues fall back to one line.
+const cues = slides.flatMap((s, i) => (s.cues && s.cues.length ? s.cues : [{ text: s.title, start: s.start, end: s.end }])
+  .map((c) => ({ ...c, slide: i })));
+
+$("deck-title").textContent = document.title = timeline.title || slides[0].title;
+if (timeline.video) { $("mp4").href = timeline.video; $("mp4").hidden = false; }
+seek.max = total;
+
+// Slide list.
+const thumbs = slides.map((s, i) => {
+  const pic = el("span", { className: "pic" }, el("iframe", { src: s.slide, tabIndex: -1, loading: "lazy", title: "" }));
+  pic.firstChild.setAttribute("aria-hidden", "true");
+  const button = el("button", { className: "thumb state", type: "button", onclick: () => jump(s.start) },
+    el("span", { className: "n", textContent: i + 1 }), pic, el("span", { className: "cap", textContent: s.title }));
+  button.setAttribute("aria-label", `${i + 1}. ${s.title}（${clock(s.start)}）`);
+  $("thumbs").append(el("li", {}, button));
+  return button;
+});
+new ResizeObserver(() => {
+  const width = thumbs[0].querySelector(".pic").clientWidth;
+  document.documentElement.style.setProperty("--thumb-scale", width / 1600);
+}).observe($("thumbs"));
+slides.slice(1).forEach((s) => $("ticks").append(el("i", { style: `left:${(s.start / total) * 100}%` })));
+
+// Transcript.
+const rows = [];
+function renderCues(query = "") {
+  cueList.replaceChildren();
+  rows.length = 0;
+  const q = query.trim().toLowerCase();
+  let shown = 0, lastSlide = -1;
+  cues.forEach((c, index) => {
+    if (q && !c.text.toLowerCase().includes(q)) return;
+    if (c.slide !== lastSlide) {
+      lastSlide = c.slide;
+      cueList.append(el("li", { className: "chapter" }, el("span", { textContent: c.slide + 1 }),
+        el("span", { textContent: slides[c.slide].title })));
+    }
+    const text = el("p");
+    if (q) {  // Highlight matches without parsing the script as HTML.
+      let from = 0, at;
+      while ((at = c.text.toLowerCase().indexOf(q, from)) >= 0) {
+        text.append(c.text.slice(from, at), el("mark", { textContent: c.text.slice(at, at + q.length) }));
+        from = at + q.length;
+      }
+      text.append(c.text.slice(from));
+    } else text.textContent = c.text;
+    // Clicking the words moves there; dragging still selects them for copying.
+    text.addEventListener("click", () => { if (getSelection().isCollapsed) jump(c.start); });
+    const ts = el("button", { className: "ts state", type: "button", textContent: clock(c.start),
+      onclick: () => { jump(c.start); audio.play(); } });
+    ts.setAttribute("aria-label", `${clock(c.start)} から再生`);
+    const row = el("li", { className: "cue" }, ts, text);
+    rows[index] = row;
+    cueList.append(row);
+    shown++;
+  });
+  if (!shown) cueList.append(el("li", { className: "empty", textContent: "一致する文はありません" }));
+  currentCue = -1;
+  update();
+}
+$("search").addEventListener("input", (e) => renderCues(e.target.value));
+
+// Playback state.
+let currentSlide = -1, currentCue = -1, userScrolled = 0;
+const lastAt = (list, t) => { let found = 0; list.forEach((x, i) => { if (t >= x.start - 0.001) found = i; }); return found; };
+const following = () => $("follow").getAttribute("aria-pressed") === "true";
+
+function scrollToCue(force) {
+  const row = rows[currentCue];
+  if (!row || (!force && (!following() || Date.now() - userScrolled < 4000))) return;
+  const c = cueList.getBoundingClientRect(), r = row.getBoundingClientRect();
+  cueList.scrollBy({ top: r.top - c.top - c.height / 2 + r.height / 2, behavior: reduced.matches ? "auto" : "smooth" });
+}
+
+// Scroll only the list itself; scrollIntoView would also scroll the page on narrow screens.
+function reveal(list, item) {
+  const c = list.getBoundingClientRect(), r = item.getBoundingClientRect();
+  list.scrollBy({ left: r.left < c.left ? r.left - c.left : Math.max(0, r.right - c.right),
+                  top: r.top < c.top ? r.top - c.top : Math.max(0, r.bottom - c.bottom) });
+}
+
+function update() {
+  const t = audio.currentTime;
+  const slide = lastAt(slides, t);
+  if (slide !== currentSlide) {
+    currentSlide = slide;
+    frame.src = slides[slide].slide;
+    thumbs.forEach((b, i) => b.setAttribute("aria-current", i === slide));
+    reveal($("rail"), thumbs[slide]);
+    $("now-count").textContent = `スライド ${slide + 1} / ${slides.length}`;
+    $("now-title").textContent = slides[slide].title;
+  }
+  const cue = lastAt(cues, t);
+  if (cue !== currentCue) {
+    rows[currentCue]?.removeAttribute("aria-current");
+    currentCue = cue;
+    rows[cue]?.setAttribute("aria-current", "true");
+    scrollToCue(false);
+  }
+  if (document.activeElement !== seek) seek.value = t;
+  seek.style.setProperty("--p", `${(t / total) * 100}%`);
+  $("time").textContent = `${clock(t)} / ${clock(total)}`;
+}
+
+function jump(t) {
+  audio.currentTime = Math.max(0, Math.min(total, t + 0.001));
+  update();
+  scrollToCue(true);
+}
+const toggle = () => (audio.paused || audio.ended ? audio.play() : audio.pause());
+const moveSlide = (delta) => jump(slides[Math.max(0, Math.min(slides.length - 1, currentSlide + delta))].start);
 
 function fit() {
-  const scale = Math.min(stage.clientWidth / 1600, stage.clientHeight / 900);
-  frame.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  const stage = $("stage");
+  frame.style.transform = `translate(-50%, -50%) scale(${Math.min(stage.clientWidth / 1600, stage.clientHeight / 900)})`;
 }
+new ResizeObserver(fit).observe($("stage"));
 
-function show(index) {
-  if (index === current) return;
-  current = index;
-  frame.src = slides[index].slide;
-  label.innerHTML = "";
-  const count = document.createElement("b");
-  count.textContent = `${index + 1} / ${slides.length}`;
-  label.append(count, document.createTextNode(slides[index].title));
-  document.title = slides[index].title;
+// Controls fade out while playing and the pointer rests, like the system video player.
+let idleTimer = 0;
+function wake() {
+  screen.classList.remove("idle");
+  clearTimeout(idleTimer);
+  if (audio.paused) return;
+  idleTimer = setTimeout(() => {
+    // Stay up while the pointer is on the controls, a menu is open or the keyboard is in them.
+    const controls = $("controls");
+    if (controls.matches(":hover") || controls.querySelector(":focus-visible") || !$("full-menu").hidden) wake();
+    else screen.classList.add("idle");
+  }, 2500);
 }
+for (const type of ["pointermove", "pointerdown", "focusin", "keydown"]) screen.addEventListener(type, wake);
+screen.addEventListener("pointerleave", () => { if (!audio.paused) { clearTimeout(idleTimer); screen.classList.add("idle"); } });
 
-function indexAt(time) {
-  let index = 0;
-  slides.forEach((s, i) => { if (time >= s.start) index = i; });
-  return index;
+// Two kinds of fullscreen: fill this browser window, or take over the monitor.
+const monitorFull = () => document.fullscreenElement || document.webkitFullscreenElement;
+const filled = () => screen.classList.contains("filled");
+function fullChanged() {
+  const on = Boolean(monitorFull()) || filled();
+  setIcon("full-icon", on ? "minimize" : "maximize");
+  $("full").setAttribute("aria-label", on ? "全画面を終了" : "全画面");
 }
-
-function jump(index) {
-  const target = Math.max(0, Math.min(slides.length - 1, index));
-  audio.currentTime = slides[target].start + 0.01;
-  show(target);
+function closeMenu() { $("full-menu").hidden = true; $("full").setAttribute("aria-expanded", "false"); }
+function fillWindow(on = !filled()) {
+  closeMenu();
+  screen.classList.toggle("filled", on);
+  fullChanged();
 }
-
-audio.addEventListener("timeupdate", () => show(indexAt(audio.currentTime)));
-audio.addEventListener("seeked", () => show(indexAt(audio.currentTime)));
-document.getElementById("prev").addEventListener("click", () => jump(current - 1));
-document.getElementById("next").addEventListener("click", () => jump(current + 1));
-document.addEventListener("keydown", (event) => {
-  if (event.target === audio) return;  // Let the audio element keep its own keys.
-  if (event.key === " ") { event.preventDefault(); audio.paused ? audio.play() : audio.pause(); }
-  if (event.key === "ArrowRight") jump(current + 1);
-  if (event.key === "ArrowLeft") jump(current - 1);
+async function fillMonitor() {
+  closeMenu();
+  if (monitorFull()) return (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  screen.classList.remove("filled");
+  // Embedded browsers may refuse, or neither enter nor answer; filling the window still helps.
+  setTimeout(() => { if (!monitorFull() && !filled()) fillWindow(true); }, 400);
+  try { await (screen.requestFullscreen || screen.webkitRequestFullscreen).call(screen); }
+  catch { fillWindow(true); }
+}
+function exitFull() {
+  if (monitorFull()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  fillWindow(false);
+}
+$("full").addEventListener("click", () => {
+  if (monitorFull() || filled()) return exitFull();
+  const open = $("full-menu").hidden;
+  $("full-menu").hidden = !open;
+  $("full").setAttribute("aria-expanded", String(open));
+  if (open) $("fill-window").focus();
 });
-window.addEventListener("resize", fit);
-fit();
-show(0);
+$("fill-window").addEventListener("click", () => fillWindow(true));
+$("fill-monitor").addEventListener("click", fillMonitor);
+$("full-menu").addEventListener("keydown", (event) => {
+  const items = [$("fill-window"), $("fill-monitor")];
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    items[(items.indexOf(document.activeElement) + 1) % 2].focus();
+  }
+  if (event.key === "Escape") { closeMenu(); $("full").focus(); }
+});
+document.addEventListener("pointerdown", (event) => { if (!event.target.closest?.(".full-wrap")) closeMenu(); });
+document.addEventListener("fullscreenchange", fullChanged);
+document.addEventListener("webkitfullscreenchange", fullChanged);
+
+// Scrubbing preview of the slide at the pointer.
+let previewSlide = -1;
+function preview(event) {
+  const box = seek.getBoundingClientRect();
+  const ratio = Math.max(0, Math.min(1, (event.clientX - box.left) / box.width));
+  const t = ratio * total, index = lastAt(slides, t);
+  if (index !== previewSlide) { previewSlide = index; $("preview-frame").src = slides[index].slide; }
+  $("preview-time").textContent = clock(t);
+  $("preview-title").textContent = slides[index].title;
+  $("preview").style.left = `${Math.max(88, Math.min(box.width - 88, ratio * box.width))}px`;
+  $("preview").classList.add("show");
+}
+seek.addEventListener("pointermove", preview);
+seek.addEventListener("pointerleave", () => $("preview").classList.remove("show"));
+
+// Resume where this deck was left off, without asking (HIG: resume playback automatically).
+const resumeKey = `presenter-position:${location.pathname}:${total}`;
+const saved = Number(store.get(resumeKey));
+// A link like player.html#t=95 opens at that moment, as YouTube's t= does; it wins over the resume point.
+const linked = Number(new URLSearchParams(location.hash.slice(1)).get("t"));
+if (linked > 0) audio.currentTime = Math.min(linked, total);
+else if (saved > 1 && saved < total - 1) audio.currentTime = saved;
+let lastSaved = 0;
+audio.addEventListener("timeupdate", () => {
+  if (Math.abs(audio.currentTime - lastSaved) > 2) { lastSaved = audio.currentTime; store.set(resumeKey, lastSaved.toFixed(1)); }
+});
+audio.addEventListener("ended", () => store.set(resumeKey, null));
+
+audio.addEventListener("timeupdate", update);
+audio.addEventListener("seeked", update);
+for (const type of ["play", "pause", "ended"]) audio.addEventListener(type, () => {
+  const playing = !audio.paused && !audio.ended;
+  setIcon("play-icon", playing ? "pause" : "play");
+  $("play").setAttribute("aria-label", playing ? "一時停止" : "再生");
+  wake();
+});
+audio.addEventListener("volumechange", () => {
+  const silent = audio.muted || audio.volume === 0;
+  setIcon("vol-icon", silent ? "volume-x" : "volume-2");
+  $("mute").setAttribute("aria-label", silent ? "ミュート解除" : "ミュート");
+  $("volume").value = audio.muted ? 0 : audio.volume;
+  $("volume").style.setProperty("--p", `${$("volume").value * 100}%`);
+});
+$("volume").style.setProperty("--p", "100%");
+seek.addEventListener("input", () => jump(Number(seek.value)));
+$("catcher").addEventListener("click", toggle);
+$("catcher").addEventListener("dblclick", () => (monitorFull() || filled() ? exitFull() : fillMonitor()));
+$("play").addEventListener("click", toggle);
+$("back").addEventListener("click", () => jump(audio.currentTime - 10));
+$("fwd").addEventListener("click", () => jump(audio.currentTime + 10));
+$("prev").addEventListener("click", () => moveSlide(-1));
+$("next").addEventListener("click", () => moveSlide(1));
+$("mute").addEventListener("click", () => { audio.muted = !audio.muted; });
+$("volume").addEventListener("input", (e) => { audio.volume = Number(e.target.value); audio.muted = false; });
+$("rate").addEventListener("change", (e) => { audio.playbackRate = Number(e.target.value); });
+$("follow").addEventListener("click", (e) => {
+  const on = !following();
+  e.currentTarget.setAttribute("aria-pressed", on);
+  if (on) { userScrolled = 0; scrollToCue(true); }
+});
+$("to-now").addEventListener("click", () => { userScrolled = 0; scrollToCue(true); });
+for (const type of ["wheel", "touchmove"]) cueList.addEventListener(type, () => { userScrolled = Date.now(); }, { passive: true });
+
+document.addEventListener("keydown", (event) => {
+  const target = event.target;
+  // Inputs, sliders, menus and buttons keep their own keys.
+  if (target.closest?.("input, select, textarea, button") || event.ctrlKey || event.metaKey || event.altKey) return;
+  const keys = { " ": toggle, k: toggle, ArrowLeft: () => jump(audio.currentTime - 5), ArrowRight: () => jump(audio.currentTime + 5),
+    j: () => jump(audio.currentTime - 10), l: () => jump(audio.currentTime + 10), Home: () => jump(0), End: () => jump(total),
+    PageUp: () => moveSlide(-1), PageDown: () => moveSlide(1), m: () => { audio.muted = !audio.muted; },
+    f: fillMonitor, t: () => fillWindow(), Escape: () => fillWindow(false) };
+  if (event.key === "Escape" && !filled()) return;  // Let the browser leave monitor fullscreen itself.
+  const action = keys[event.shiftKey && event.key === "ArrowLeft" ? "PageUp" : event.shiftKey && event.key === "ArrowRight" ? "PageDown" : event.key];
+  if (action) { event.preventDefault(); action(); }
+});
+
+// Side panes open and close from the header; the choice is remembered per browser.
+const PANES = { rail: ["スライド一覧", "left"], side: ["文字起こし", "right"] };
+function setPane(id, open) {
+  const [name, edge] = PANES[id];
+  $(id).hidden = !open;
+  const button = $(`toggle-${id}`);
+  button.setAttribute("aria-expanded", String(open));
+  button.setAttribute("aria-label", `${name}を${open ? "閉じる" : "開く"}`);
+  setIcon(`${id}-icon`, `panel-${edge}-${open ? "close" : "open"}`);
+  store.set(`presenter-pane-${id}`, open ? null : "closed");
+  if (open && id === "side") scrollToCue(true);
+  if (open && id === "rail" && currentSlide >= 0) reveal($("rail"), thumbs[currentSlide]);
+}
+for (const id of Object.keys(PANES)) {
+  $(`toggle-${id}`).addEventListener("click", () => setPane(id, $(id).hidden));
+  setPane(id, store.get(`presenter-pane-${id}`) !== "closed");
+}
+
+renderCues();
 </script>
 </body>
 </html>

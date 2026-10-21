@@ -15,7 +15,7 @@
       "name": "no-script-yet",
       "skill": "presenter",
       "prompt": "このスライド（outputs/e2e-deck-noscript）にナレーションを付けて動画っぽくしたいんだけど、どうすればいい？",
-      "expected_output": "narration/script.json と checked/receipt.json がないことを確かめ、自分で原稿を書かずに presentation-ja での原稿作成と検査を先に行うよう案内する（または presentation-ja に引き継ぐ）。動画の書き出しは範囲外であることを伝える。",
+      "expected_output": "narration/script.json と checked/receipt.json がないことを確かめ、自分で原稿を書かずに presentation-ja で原稿作成と検査を先に行う。検査後に narrate で音声とプレーヤーを作り、動画が求められていれば video で MP4 も書き出す。未生成の成果物を完成したとは報告しない。",
       "files": ["outputs/e2e-deck-noscript"]
     },
     {
@@ -33,6 +33,22 @@
       "prompt": "新しいPCに presenter のスキルを入れたので、音声合成が使えるようにセットアップして。",
       "expected_output": "doctor で不足を調べ、足りないソフトは winget のコマンドと容量を見せて承認を得てから入れる。Fish Audio Research License（非商用）を説明して同意を得る。setup-s2.ps1 を -CheckOnly のあと本番をバックグラウンドで実行し、say で音が出るかをユーザーに確かめ、報告する。",
       "files": []
+    },
+    {
+      "id": 5,
+      "name": "player-design-and-transcript",
+      "skill": "presenter",
+      "prompt": "検査済みのスライド（outputs/e2e-deck）に音声を付けて。話している文をテキストで選んで、そこから聞けるプレーヤーにしたい。",
+      "expected_output": "narrate で player.html を作る。スライド一覧・再生操作・文字起こしがあり、文を選ぶとその文の実測の開始時刻へ移ることを、ブラウザで最初・途中・最後の文について確かめる。検索とコピーができること、狭い幅でも崩れないことを確かめて、確かめた範囲を報告する。",
+      "files": ["outputs/e2e-deck"]
+    },
+    {
+      "id": 6,
+      "name": "mp4-export-with-real-output",
+      "skill": "presenter",
+      "prompt": "この検査済みデッキを、音声付きのMP4にも書き出してください。スライドの最初から最後まで入れて、一般的な動画プレーヤーで再生できるものにして。",
+      "expected_output": "narrate の後に presenter-tts video で presentation.mp4 を書き出す（既定 1920x1080・30fps・H.264/AAC）。ffprobe の結果と全長を報告し、先頭・中間・末尾のフレームを見てスライドの順と切り替わりを確かめる。ブラウザや FFmpeg が足りなければ、そのことを伝えて完成とは言わない。",
+      "files": ["outputs/e2e-deck"]
     }
   ]
 }

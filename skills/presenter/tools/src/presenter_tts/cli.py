@@ -15,6 +15,7 @@ from . import api as speech_api, server, voices
 from .audio import AudioError, Backend, render
 from .narrate import narrate as narrate_deck
 from .say import say as say_loop
+from .video import export as export_video
 from .ssml import MAX_BYTES, SSMLError, compile_ssml, event_dict
 
 app = typer.Typer(help="Local SSML 1.1 presentation speech with quantized Fish S2 Pro.",
@@ -177,17 +178,39 @@ def narrate(ctx: typer.Context,
             = None,
             voice: VoiceOption = None,
             force: Annotated[bool, typer.Option(help="Resynthesize every slide, not just changed ones.")]
-            = False):
+            = False,
+            checked: Annotated[Optional[Path], typer.Option(
+                help="presentation-ja's checked output folder containing receipt.json. "
+                     "Default: <narration>/checked.")] = None):
     """Turn presentation-ja's checked per-slide script into narration audio and a player.
 
     Writes <narration>/audio/<slide>.wav, narration.wav, timeline.json and player.html."""
     config = load_config(ctx, voice)
     ensure_server(config)
-    result = narrate_deck(config, deck, narration, force, log=lambda line: typer.echo(line, err=True))
+    result = narrate_deck(config, deck, narration, force, log=lambda line: typer.echo(line, err=True),
+                         checked=checked)
     folder = narration or deck / "narration"
     typer.echo(json.dumps({"player": str(folder / "player.html"), "audio": str(folder / "narration.wav"),
                            "timeline": str(folder / "timeline.json"), "slides": len(result["slides"]),
                            "total_seconds": result["total_seconds"]}, ensure_ascii=False, indent=2))
+
+
+@app.command()
+@handled
+def video(deck: Annotated[Path, typer.Argument(exists=True, file_okay=False, help="html-deck folder.")],
+          narration: Annotated[Optional[Path], typer.Option(
+              help="Folder narrate wrote to. Default: <deck>/narration.")] = None,
+          output: Annotated[Optional[Path], typer.Option(
+              help="MP4 path. Default: <narration>/presentation.mp4.")] = None,
+          width: Annotated[int, typer.Option(min=320, help="Video width; height follows 16:9.")] = 1920,
+          fps: Annotated[int, typer.Option(min=1, max=60)] = 30):
+    """Export the narrated deck as an MP4 (H.264/AAC) after `narrate`, and link it from player.html.
+
+    Needs Chrome or Edge (PRESENTER_BROWSER overrides) and FFmpeg."""
+    width -= width % 2  # yuv420p needs even dimensions.
+    result = export_video(narration or deck / "narration", output, width, width * 9 // 16 // 2 * 2, fps,
+                          log=lambda line: typer.echo(line, err=True))
+    typer.echo(json.dumps(result, ensure_ascii=False, indent=2))
 
 
 @app.command()

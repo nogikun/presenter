@@ -155,6 +155,15 @@ class VoiceCommandTests(unittest.TestCase):
         self.assertIn('out of memory', result.output)
         self.assertFalse((self.folder / 'pid').exists())
 
+    def test_narrate_forwards_an_alternate_check_folder(self):
+        checked = self.folder / 'checked-v2'
+        with patch('presenter_tts.cli.ensure_server'), \
+                patch('presenter_tts.cli.narrate_deck', return_value={
+                    'slides': [], 'total_seconds': 0}) as generate:
+            result = self.invoke('narrate', str(self.folder), '--checked', str(checked))
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertEqual(generate.call_args.kwargs['checked'], checked)
+
     def test_server_stop_without_a_started_server(self):
         from presenter_tts import server
         with patch.object(server, 'PID_FILE', self.folder / 'pid'):
