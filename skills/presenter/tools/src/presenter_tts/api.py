@@ -30,14 +30,14 @@ FORMATS = {
 MODELS = ("s2-pro", "tts-1", "tts-1-hd", "gpt-4o-mini-tts")
 MAX_INPUT = 4096  # OpenAI's limit for one request.
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
-KEY_FILE = voices.RUNTIME / "api-key.txt"
+KEY_FILE = voices.HOME / "api-key.txt"  # A secret, so not under cache/ (which may be wiped).
 
 
 def api_key(host, given=None):
     """The Bearer key clients must send, or None on loopback where only this machine connects.
 
     Off loopback anyone on the network could speak in a cloned voice, so a key is required:
-    the given one, else one generated once and kept in .runtime/api-key.txt."""
+    the given one, else one generated once and kept in <home>/api-key.txt."""
     if given:
         return given
     if host in LOCAL_HOSTS:

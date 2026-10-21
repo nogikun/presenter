@@ -1,4 +1,4 @@
-"""Voice profiles: clone a reference recording into voices/<name>.s2voice with s2.cpp."""
+"""Voice profiles: clone a reference recording into <home>/voices/<name>.s2voice with s2.cpp."""
 
 from array import array
 from datetime import datetime
@@ -14,11 +14,14 @@ import wave
 
 from .audio import AudioError
 
-PROJECT = Path(__file__).resolve().parents[2]  # src/presenter_tts/voices.py -> repository root
-# Like uv: .runtime holds what can be rebuilt (engine, model, caches) and may be deleted any time;
-# voices/ holds profiles and recordings that cannot be, so it lives apart (both gitignored).
-RUNTIME = PROJECT / ".runtime"
-VOICES = PROJECT / "voices"
+# One home per user, shared by every project and kept across skill updates (like uv's cache);
+# PRESENTER_TTS_HOME overrides it. cache/ holds what can be rebuilt (engine, model, fillers) and may
+# be deleted any time; voices/ holds profiles and recordings that cannot be.
+HOME = Path(os.environ.get("PRESENTER_TTS_HOME") or Path(
+    os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "share") / "presenter-tts")
+RUNTIME = HOME / "cache"
+VOICES = HOME / "voices"
+CONFIG = HOME / "config.toml"
 FILLER_CACHE = RUNTIME / "fillers"
 NAME = re.compile(r"[A-Za-z0-9_-]+")
 # s2.cpp recommends a 5-30 s reference; shorter clips clone poorly.

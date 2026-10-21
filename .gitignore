@@ -4,5 +4,3 @@
 outputs/
 __pycache__/
 *.egg-info/
-presenter.local.toml
-voices/

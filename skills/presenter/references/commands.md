@@ -1,24 +1,30 @@
-# 使い方
+# presenter-tts のコマンド
 
-`presenter-tts`の普段の使い方をまとめる。初回のビルドとモデルの準備は[ローカル音声生成の手順](tts.md)を参照。
-コマンドはすべてリポジトリ直下で実行する。設定ファイル`presenter.local.toml`は実行したフォルダから探す。
+`<presenter>`はこのスキルのフォルダ、`<home>`は`%LOCALAPPDATA%\presenter-tts`（環境変数`PRESENTER_TTS_HOME`で変更可）。
+エンジンやモデルの準備は presenter-setup スキル（[エンジンの詳細](engine.md)）が行う。
 
-## 0. 準備（最初の1回）
+## 0. 呼び方
 
-```powershell
-uv sync
-```
+すべて`uv run --project "<presenter>/tools" presenter-tts ...`で呼ぶ。どのフォルダから実行してもよい。
+初回の呼び出しで、uvが`<presenter>/tools/.venv`にPython 3.11とTyperを`uv.lock`のとおり入れる。`uv sync`は不要。
+設定は`<home>/config.toml`（なければ既定値）。別の設定を使うときは`--config <file>`をコマンド名の直後に付ける。
 
-Python 3.11と依存パッケージ（Typer）を`uv.lock`のとおり`.venv`へ入れる。以降は`uv run`が`.venv`を使う。
+| 場所 | 中身 | 消してよいか |
+|---|---|---|
+| `<home>/cache/` | s2.cpp、ビルド、モデル、ログ、フィラー | よい（presenter-setupで取り直せる） |
+| `<home>/voices/` | 登録した声と元の録音 | 消さない（取り直せない） |
+| `<home>/config.toml`、`<home>/api-key.txt` | 設定とAPIキー | 消さない |
+
+片付けの手順は[cleanup.md](cleanup.md)。
 
 ## 1. TTSサーバー
 
 `say`と`speak`は、S2 ProのTTSサーバー（s2.cpp）に音声を作らせる。
 
 ```powershell
-uv run presenter-tts server start
-uv run presenter-tts server status
-uv run presenter-tts server stop
+uv run --project "<presenter>/tools" presenter-tts server start
+uv run --project "<presenter>/tools" presenter-tts server status
+uv run --project "<presenter>/tools" presenter-tts server stop
 ```
 
 - `start`はサーバーを裏で（別プロセスで）起動し、リクエストを受け付けられるまで待ってから戻る。ターミナルを閉じても動き続ける。
@@ -26,12 +32,12 @@ uv run presenter-tts server stop
 - 動いている間はGPUメモリを約4.6 GB使う。使い終わったら`stop`で止める。
 - `stop`で止まるのは、このツールが起動したサーバーだけ。s2.cppを手動で起動した場合は、そのターミナルでCtrl+Cを押して止める。
 - GPUに載せる層の数やコーデックの置き場所は、設定の`[server]`（`gpu_layers`、`codec_gpu`）で変える。
-- 起動時の出力は`.runtime/s2-server.log`に残る。起動に失敗したときは、このログの末尾も表示する。
+- 起動時の出力は`<home>/cache/s2-server.log`に残る。起動に失敗したときは、このログの末尾も表示する。
 
 ## 2. 話させる（say）
 
 ```powershell
-uv run presenter-tts say
+uv run --project "<presenter>/tools" presenter-tts say
 ```
 
 `> `が出たら文字を入力してEnter。生成しながら再生する。
@@ -45,8 +51,8 @@ uv run presenter-tts say
 1回だけ話させる、声を指定する場合:
 
 ```powershell
-uv run presenter-tts say こんにちは、テストです。
-uv run presenter-tts say --voice myvoice
+uv run --project "<presenter>/tools" presenter-tts say こんにちは、テストです。
+uv run --project "<presenter>/tools" presenter-tts say --voice myvoice
 ```
 
 長い文は「、」で区切って少しずつ生成する（区切りの間に短い間が入る）。本文がなかなか届かないときは、その声の「えーと」などのフィラーが入ることがある。
@@ -56,9 +62,9 @@ uv run presenter-tts say --voice myvoice
 録音と、その録音で話している内容をそのまま書いた文字起こしから、声を作る。
 
 ```powershell
-uv run presenter-tts voice add myvoice 録音.wav --text "録音で話している内容"
-uv run presenter-tts voice list
-uv run presenter-tts voice remove myvoice
+uv run --project "<presenter>/tools" presenter-tts voice add myvoice 録音.wav --text "録音で話している内容"
+uv run --project "<presenter>/tools" presenter-tts voice list
+uv run --project "<presenter>/tools" presenter-tts voice remove myvoice
 ```
 
 - 使ってよい声（自分の声、または本人の許可を得た声）だけを登録する。
@@ -67,8 +73,8 @@ uv run presenter-tts voice remove myvoice
 - 作成後、確認用の文を`outputs/voice-<名前>.wav`に保存して再生する（`--no-preview`で再生しない）。
 - 既定ではCPUで作る（約30秒〜1分）。サーバーを止めているときは`--gpu`で速くできる。
 - `voice list`の`*`は、`--voice`を付けないときに使う声（設定の`voice = "名前"`）。
-- 声はプロジェクト直下の`voices/`に入る（gitには入らない。元の録音は`voices/sources/`に置くとよい）。
-  `.runtime/`は取り直せるもの（エンジン・モデル・キャッシュ）だけなので、容量を空けたいときは消してよい。`voices/`は消さない。
+- 声は`<home>/voices/`に入り、どのプロジェクトからも名前で使える（元の録音は`<home>/voices/sources/`に置くとよい）。
+  `<home>/cache/`とは分けてあるので、容量を空けるために`cache/`を消しても声は残る。
 
 | オプション | 意味 |
 |---|---|
@@ -82,9 +88,9 @@ uv run presenter-tts voice remove myvoice
 SSMLで書いた原稿をWAVにする。
 
 ```powershell
-uv run presenter-tts plan examples/presentation.ssml
-uv run presenter-tts speak examples/presentation.ssml --force
-uv run presenter-tts speak examples/presentation.ssml --voice myvoice --play --force
+uv run --project "<presenter>/tools" presenter-tts plan "<presenter>/tools/examples/presentation.ssml"
+uv run --project "<presenter>/tools" presenter-tts speak "<presenter>/tools/examples/presentation.ssml" --force
+uv run --project "<presenter>/tools" presenter-tts speak "<presenter>/tools/examples/presentation.ssml" --voice myvoice --play --force
 ```
 
 - `plan`はモデルを使わず、区切り・間・マーカーをJSONで表示する。原稿の確認用。
@@ -98,7 +104,7 @@ OpenAIの音声合成API（`POST /v1/audio/speech`）と同じ形で使えるサ
 OpenAIのSDKや、OpenAI互換のTTSに対応したアプリから、接続先を変えるだけで使える。
 
 ```powershell
-uv run presenter-tts api --voice myvoice
+uv run --project "<presenter>/tools" presenter-tts api --voice myvoice
 ```
 
 起動すると、接続先とAPIキーを表示する。Ctrl+Cで止まる。TTSサーバーが止まっていれば自動で起動する。
@@ -110,7 +116,7 @@ API key: ...
 ```
 
 - 既定では`0.0.0.0:8000`で待ち受け、同じネットワークのほかの機器（スマホ、別のPC）からも使える。ほかの機器からは`http://<このPCのIPアドレス>:8000/v1`へ接続する。初回にWindowsのファイアウォールの確認が出たら、プライベートネットワークを許可する。
-- ネットワークに公開すると、だれでもクローンした声で話させられてしまうため、APIキーが必須。キーは初回に作って`.runtime/api-key.txt`に保存し、以降も同じものを使う。自分で決める場合は`--api-key`か環境変数`PRESENTER_TTS_API_KEY`。
+- ネットワークに公開すると、だれでもクローンした声で話させられてしまうため、APIキーが必須。キーは初回に作って`<home>/api-key.txt`に保存し、以降も同じものを使う。自分で決める場合は`--api-key`か環境変数`PRESENTER_TTS_API_KEY`。
 - このPCだけで使うなら`--host 127.0.0.1`。この場合はキーが不要になる。
 - `--port`で待ち受けるポートを変えられる。
 
@@ -147,7 +153,7 @@ with client.audio.speech.with_streaming_response.create(
 ## 6. 調子が悪いとき（doctor）
 
 ```powershell
-uv run presenter-tts doctor
+uv run --project "<presenter>/tools" presenter-tts doctor
 ```
 
 GPU、FFmpeg/FFplay、ネットワーク、サーバーのポートをまとめて確認する。
@@ -158,15 +164,15 @@ GPU、FFmpeg/FFplay、ネットワーク、サーバーのポートをまとめ�
 | 再生がプツプツする | 設定の`stream_start_buffer_ms_per_char`を上げる |
 | クローンした声が小さい | 録音の音量。`voice add --force`で作り直す |
 | 声が似ていない | 録音を長くする（10秒以上）、文字起こしが録音と合っているか確認 |
-| サーバーが起動しない | `.runtime/s2-server.log`の末尾。GPUメモリ不足なら`[server] gpu_layers`を下げる |
-| APIが`401`を返す | `Authorization: Bearer <APIキー>`。キーは`.runtime/api-key.txt` |
+| サーバーが起動しない | `<home>/cache/s2-server.log`の末尾。GPUメモリ不足なら`[server] gpu_layers`を下げる |
+| APIが`401`を返す | `Authorization: Bearer <APIキー>`。キーは`<home>/api-key.txt` |
 | ほかの機器からAPIにつながらない | Windowsのファイアウォールでpythonを許可しているか、IPアドレスが合っているか |
 
-## 7. 設定（presenter.local.toml）
+## 7. 設定（<home>/config.toml）
 
 | 場所 | 項目 | 意味 |
 |---|---|---|
-| 先頭 | `voice` | 普段使う声の`.s2voice` |
+| 先頭 | `voice` | 普段使う声の名前（`voice list`の名前）か`.s2voice`のパス |
 | `[generation]` | `stream_start_buffer_ms_per_char` | 話し始める前に、1文字あたりためる時間（途切れ対策） |
 | `[server]` | `auto_start` | `say`/`speak`でサーバーを自動起動するか（既定true） |
 | `[server]` | `gpu_layers` | GPUに載せる層の数（既定36＝全部） |
@@ -180,6 +186,6 @@ GPU、FFmpeg/FFplay、ネットワーク、サーバーのポートをまとめ�
 すべてのオプションは`--help`で確認できる。
 
 ```powershell
-uv run presenter-tts --help
-uv run presenter-tts voice add --help
+uv run --project "<presenter>/tools" presenter-tts --help
+uv run --project "<presenter>/tools" presenter-tts voice add --help
 ```

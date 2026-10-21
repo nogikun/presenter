@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-spec = importlib.util.spec_from_file_location('fetch_s2', Path(__file__).parents[1] / 'tools/fetch_s2.py')
+spec = importlib.util.spec_from_file_location('fetch_s2', Path(__file__).parents[1] / 'scripts/fetch_s2.py')
 fetch = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(fetch)
 

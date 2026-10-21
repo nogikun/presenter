@@ -10,6 +10,9 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+# Same per-user home as presenter_tts.voices: reports go there, not into the installed skill.
+HOME = Path(os.environ.get("PRESENTER_TTS_HOME") or Path(
+    os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "share") / "presenter-tts")
 
 
 def decode(data):
@@ -25,14 +28,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--synthesize", action="store_true", help="Requires an already running local TTS server")
     parser.add_argument("--input", type=Path, default=ROOT / "examples/presentation.ssml")
-    parser.add_argument("--config", type=Path, default=Path("presenter.local.toml"))
+    parser.add_argument("--config", type=Path, help="Default: <home>/config.toml, as for the CLI")
     parser.add_argument("--runs", type=int, choices=range(1, 6), default=1)
     args = parser.parse_args()
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
-    folder = ROOT / ".runtime" / "validation" / stamp
+    folder = HOME / "cache" / "validation" / stamp
     folder.mkdir(parents=True)
-    temporary = ROOT / ".runtime" / "tmp"
-    temporary.mkdir(exist_ok=True)
+    temporary = HOME / "cache" / "tmp"
+    temporary.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, PYTHONUTF8="1", TEMP=str(temporary), TMP=str(temporary))
     steps = []
     report = {"created_utc": stamp, "python": sys.executable, "steps": steps, "audio": []}
@@ -59,7 +62,7 @@ def main():
         if compiler := shutil.which("nvcc"):
             run("cuda-compiler-on-path", [compiler, "--version"])
         ok = run("tests", [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"])
-        cli = [sys.executable, "-m", "presenter_tts", "--config", str(args.config)]
+        cli = [sys.executable, "-m", "presenter_tts", *(["--config", str(args.config)] if args.config else [])]
         ok = run("ssml-plan", cli + ["plan", str(args.input)]) and ok
         ok = run("doctor", cli + ["doctor"]) and ok
         if args.synthesize and ok:

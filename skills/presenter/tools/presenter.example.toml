@@ -1,5 +1,5 @@
-# Copy to presenter.local.toml (gitignored) and adjust. Values below are the defaults measured on
-# an RTX 3080 (10 GB) with the Q4_K_M model; other GPUs may need different numbers.
+# Copy to %LOCALAPPDATA%\presenter-tts\config.toml (or pass --config) and adjust. Values below are
+# the defaults measured on an RTX 3080 (10 GB) with the Q4_K_M model; other GPUs may need others.
 backend = "s2cpp"
 url = "http://127.0.0.1:3030"
 timeout = 120

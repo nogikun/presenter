@@ -7,8 +7,10 @@ param(
     [string]$Revision = 'main'
 )
 $ErrorActionPreference = 'Stop'
+# The uv project (skills/presenter/tools) and the per-user home shared with presenter_tts.voices.
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$runtimeRoot = Join-Path $repoRoot '.runtime'
+$homeRoot = if ($env:PRESENTER_TTS_HOME) { $env:PRESENTER_TTS_HOME } else { Join-Path $env:LOCALAPPDATA 'presenter-tts' }
+$runtimeRoot = Join-Path $homeRoot 'cache'
 
 function Find-CMake {
     $found = Get-Command cmake -ErrorAction SilentlyContinue

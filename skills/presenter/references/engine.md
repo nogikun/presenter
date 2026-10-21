@@ -19,16 +19,14 @@ Python側にPyTorchやモデルを読み込まないため、TTSサーバーと�
 
 ## まずSSMLを検証する
 
-環境診断と実機の速度計測をまとめる場合は、[検証コマンド](tts-cuda-wsl.md#検証結果をまとめて保存する)を参照。
+環境診断と実機の速度計測をまとめる場合は、presenter-setupスキルの`references/cuda-wsl.md`（検証結果をまとめて保存する）を参照。
 
-リポジトリ直下で実行する。uvのプロジェクトなので、最初に`uv sync`で`.venv`へ依存関係（Python 3.11、Typer）を入れる。
-以降は`uv run`が`.venv`を使うので、仮想環境を有効にする必要はない。
+`uv run --project`が初回に`<presenter>/tools/.venv`へ依存関係（Python 3.11、Typer）を入れる。`uv sync`や仮想環境の有効化は不要。
 
 ```powershell
-uv sync
-uv run presenter-tts plan examples/presentation.ssml
-uv run presenter-tts doctor
-uv run python -m unittest discover -s tests -v
+uv run --project "<presenter>/tools" presenter-tts plan "<presenter>/tools/examples/presentation.ssml"
+uv run --project "<presenter>/tools" presenter-tts doctor
+uv run --project "<presenter>/tools" python -m unittest discover -s "<presenter>/tools/tests" -v
 ```
 
 `plan`はモデルを使わず、文章・間・演出パラメータ・マーカーをJSONで表示する。
@@ -37,41 +35,41 @@ uv run python -m unittest discover -s tests -v
 
 ## S2 Proのセットアップ
 
-CUDA更新・WSL側の診断と設定方針は[CUDAとWSLの確認](tts-cuda-wsl.md)を参照。
+CUDA更新・WSL側の診断と設定方針は、presenter-setupスキルの`references/cuda-wsl.md`を参照。
 
 必要なもの:
 
 - Visual Studio 2022の「C++によるデスクトップ開発」とCMakeツール
 - CUDA Toolkit 12.4以上。`nvcc --version`で確認する。`nvidia-smi`に表示されるCUDAの値はドライバー側の対応値。
-- Git、uv（Python 3.11は`uv sync`が用意する）、FFmpegとFFplay
+- Git、uv（Python 3.11はuvが用意する）、FFmpegとFFplay
 - モデル約3.6GB、トークナイザー約12MBに加え、ソースとビルド用のディスク空き容量
 - GitHubとHugging Faceへの通信
 
 ```powershell
-.\tools\setup-s2.ps1 -CheckOnly
-.\tools\setup-s2.ps1
+& "<presenter>/tools/scripts/setup-s2.ps1" -CheckOnly
+& "<presenter>/tools/scripts/setup-s2.ps1"
 ```
 
-セットアップは`.runtime/`内にs2.cppとggmlを取得し、RTX 3080のSM86向けにビルドする。
+セットアップは`<home>/cache/`内にs2.cppとggmlを取得し、RTX 3080のSM86向けにビルドする。
 GGUFは`rodrigomt/s2-pro-gguf`の`Q4_K_M`を取得する。
 モデルの公開LFS SHA-256を照合し、ダウンロード途中のファイルは`.part`として扱う。
-利用したモデルのリビジョンとハッシュを`.runtime/models/provenance.json`、ソースのコミットを
-`.runtime/s2-source-revision.txt`に記録する。既存のビルド先に対して自動で最新版へ更新しない。
+利用したモデルのリビジョンとハッシュを`<home>/cache/models/provenance.json`、ソースのコミットを
+`<home>/cache/s2-source-revision.txt`に記録する。既存のビルド先に対して自動で最新版へ更新しない。
 
-モデルは`.runtime/models/`に置き、同じディレクトリに対応する`tokenizer.json`を置く。
+モデルは`<home>/cache/models/`に置き、同じディレクトリに対応する`tokenizer.json`を置く。
 別形式のNF4・GPTQ・FP8チェックポイントをGGUFとして指定してはいけない。
 
-TTSサーバーは`uv run presenter-tts server start`で裏で起動する（[使い方](usage.md#1-ttsサーバー)）。
-`say`・`speak`・`api`は、止まっていれば自動で起動する。出力は`.runtime/s2-server.log`に残る。
+TTSサーバーは`uv run --project "<presenter>/tools" presenter-tts server start`で裏で起動する（[使い方](commands.md#1-ttsサーバー)）。
+`say`・`speak`・`api`は、止まっていれば自動で起動する。出力は`<home>/cache/s2-server.log`に残る。
 
 既定はGPUに全36層、コーデックもGPU。VRAMが足りずに起動できないときは、
-`presenter.local.toml`の`[server]`で`gpu_layers`を減らす（例: 18）か、`codec_gpu = false`にする。
+`<home>/config.toml`の`[server]`で`gpu_layers`を減らす（例: 18）か、`codec_gpu = false`にする。
 上流READMEではQ4_K_Mの全GPU実行で約7.2GBを見込むが、実測のサーバー分は約4 GBだった。
 `--max-tokens`を小さくしても、s2.cppが事前確保するKVキャッシュ全体が小さくなるわけではない。
 
 ```powershell
-Copy-Item presenter.example.toml presenter.local.toml
-uv run presenter-tts speak examples/presentation.ssml --output outputs/presentation.wav --play
+Copy-Item "<presenter>/tools/presenter.example.toml" "$env:LOCALAPPDATA\presenter-tts\config.toml"
+uv run --project "<presenter>/tools" presenter-tts speak "<presenter>/tools/examples/presentation.ssml" --output outputs/presentation.wav --play
 ```
 
 WAVと同名のJSONに、各発話の長さ・マーカーのフレーム位置・最初のPCM到着時間・RTFを保存する。
@@ -94,7 +92,7 @@ voice = "myvoice"
 録音と、その録音で話している内容をそのまま書いた文字起こしから、声のプロファイルを作る。
 
 ```powershell
-uv run presenter-tts voice add myvoice 録音.wav --text "録音で話している内容"
+uv run --project "<presenter>/tools" presenter-tts voice add myvoice 録音.wav --text "録音で話している内容"
 ```
 
 - 録音はFFmpegが読める形式なら何でもよい。44.1 kHzモノラルに変換し、ピークが-3 dBになるよう音量を上げてから登録する（小さい録音からは小さい声ができるため。`--no-boost`で無効）。
@@ -103,17 +101,17 @@ uv run presenter-tts voice add myvoice 録音.wav --text "録音で話してい�
 - 作成後、確認用の文を`outputs/voice-<名前>.wav`に保存して再生する（`--no-preview`で再生しない）。
 - 同じ名前は`--force`を付けない限り上書きしない。置き換えた場合、その声のフィラーは作り直される。
 
-登録した声はプロジェクト直下の`voices/`に入り、名前で使える（gitには入らない）。
-`.runtime/`（エンジン・モデル・キャッシュ）とは分けてあるので、容量を空けるために`.runtime/`を消しても声は残る。
+登録した声は`<home>/voices/`に入り、どのプロジェクトからも名前で使える。
+`<home>/cache/`（エンジン・モデル・キャッシュ）とは分けてあるので、容量を空けるために`cache/`を消しても声は残る。
 
 ```powershell
-uv run presenter-tts voice list
-uv run presenter-tts say --voice myvoice
-uv run presenter-tts speak examples/presentation.ssml --voice myvoice --force
-uv run presenter-tts voice remove myvoice
+uv run --project "<presenter>/tools" presenter-tts voice list
+uv run --project "<presenter>/tools" presenter-tts say --voice myvoice
+uv run --project "<presenter>/tools" presenter-tts speak "<presenter>/tools/examples/presentation.ssml" --voice myvoice --force
+uv run --project "<presenter>/tools" presenter-tts voice remove myvoice
 ```
 
-`voice list`の`*`は`presenter.local.toml`の`voice`で選ばれている声。`--voice default`はクローンしない標準の声。
+`voice list`の`*`は`<home>/config.toml`の`voice`で選ばれている声。`--voice default`はクローンしない標準の声。
 対話モードの`say`では、`/voice 名前`で途中から切り替えられる。
 
 ## SSMLの対応範囲
@@ -148,7 +146,7 @@ W3C文法の全体をXSDで検証しているわけではなく、対応サブ�
 
 ## VOICEVOXで利用する
 
-別ファイル`presenter.local.toml`に、次の内容だけを保存する。
+別ファイル`<home>/config.toml`に、次の内容だけを保存する。
 標準VOICEVOX ENGINEを起動してから同じ`speak`コマンドを実行する。
 
 ```toml

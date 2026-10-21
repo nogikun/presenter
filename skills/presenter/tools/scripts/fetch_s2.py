@@ -21,7 +21,7 @@ def digest(path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--directory", type=Path, default=Path(".runtime/models"))
+    parser.add_argument("--directory", type=Path, required=True)
     args = parser.parse_args()
     try:
         with urllib.request.urlopen(f"https://huggingface.co/api/models/{MODEL}?blobs=true", timeout=30) as response:

@@ -162,6 +162,15 @@ class VoiceCommandTests(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertIn('No server started by this tool', result.output)
 
+    def test_doctor_reports_a_missing_engine(self):
+        with patch.object(voices, 'RUNTIME', self.folder / 'empty-cache'):
+            result = self.invoke('doctor')
+        self.assertEqual(result.exit_code, 0, result.output)
+        report = json.loads(result.output)
+        self.assertFalse(report['engine']['ready'])
+        self.assertIn('setup-s2.ps1', report['engine']['missing'])
+        self.assertIn('windows', report['prerequisites'])
+
     def test_normalize_raises_peak_to_minus_3_db(self):
         path = self.folder / 'quiet.wav'
         write_wav(path, [0, 3000, -6000, 1500])

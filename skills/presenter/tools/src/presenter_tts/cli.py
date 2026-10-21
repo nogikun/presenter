@@ -13,6 +13,7 @@ import typer
 
 from . import api as speech_api, server, voices
 from .audio import AudioError, Backend, render
+from .narrate import narrate as narrate_deck
 from .say import say as say_loop
 from .ssml import MAX_BYTES, SSMLError, compile_ssml, event_dict
 
@@ -44,11 +45,11 @@ def handled(command):
 
 
 def load_config(ctx, voice=None):
-    path = ctx.obj
+    path = ctx.obj or voices.CONFIG
     if path.exists():
         config = tomllib.loads(path.read_text(encoding="utf-8-sig"))  # Tolerate an editor's BOM.
-    elif path == Path("presenter.local.toml"):
-        config = {"backend": "s2cpp"}
+    elif ctx.obj is None:
+        config = {"backend": "s2cpp"}  # No config.toml yet: defaults.
     else:
         raise AudioError(f"Config does not exist: {path}")
     # `voice` may be a name from voices/ (voice = "myvoice") or a .s2voice path.
@@ -72,19 +73,50 @@ def read_document(source):
 
 @app.callback()
 def main(ctx: typer.Context,
-         config: Annotated[Path, typer.Option(help="TOML settings file.")] = Path("presenter.local.toml")):
+         config: Annotated[Optional[Path], typer.Option(
+             help="TOML settings file (default: <home>/config.toml).")] = None):
     ctx.obj = config
 
 
 @app.command()
 @handled
 def doctor(ctx: typer.Context):
-    """Check GPU, FFmpeg, network and the local TTS port."""
+    """Check GPU, toolchain, engine files, voices, network and the local TTS port (JSON).
+
+    presenter-setup reads `engine.ready` and `prerequisites` to decide what still needs doing."""
     from urllib.parse import urlsplit
     import socket
+    import re
     config = load_config(ctx)
     result = {"python": sys.version.split()[0], "ffmpeg": shutil.which("ffmpeg"),
               "ffplay": shutil.which("ffplay"), "backend": config.get("backend", "s2cpp")}
+    try:
+        engine_ok, engine_note = bool(voices.engine()), None
+    except AudioError as exc:
+        engine_ok, engine_note = False, str(exc)
+    cuda_file = voices.RUNTIME / "s2-cuda-root.txt"
+    cuda_root = cuda_file.read_text(encoding="utf-8-sig").strip() if cuda_file.is_file() else None
+    result["home"] = {"path": str(voices.HOME), "config": voices.CONFIG.is_file(),
+                      "voices": [p["name"] for p in voices.profiles()]}
+    result["engine"] = {"ready": engine_ok, "missing": engine_note, "cuda_root": cuda_root,
+                        "cache": str(voices.RUNTIME)}
+    nvcc = str(Path(cuda_root) / "bin" / "nvcc.exe") if cuda_root else shutil.which("nvcc")
+    cuda_version = None
+    if nvcc and Path(nvcc).is_file():
+        found = re.search(r"release (\d+\.\d+)", subprocess.run(
+            [nvcc, "--version"], capture_output=True, text=True, timeout=30).stdout)
+        cuda_version = found and found[1]
+    vswhere = Path(r"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe")
+    visual_studio = None
+    if vswhere.is_file():
+        visual_studio = subprocess.run(
+            [str(vswhere), "-latest", "-products", "*", "-requires",
+             "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", "-property", "installationPath"],
+            capture_output=True, text=True, timeout=30).stdout.strip() or None
+    result["prerequisites"] = {"windows": sys.platform == "win32", "uv": shutil.which("uv"),
+                               "git": shutil.which("git"), "nvcc": nvcc, "cuda_version": cuda_version,
+                               "visual_studio_cpp": visual_studio,
+                               "cmake": shutil.which("cmake") or (visual_studio and "bundled with Visual Studio")}
     command = shutil.which("nvidia-smi")
     if command:
         proc = subprocess.run([command, "--query-gpu=name,memory.total,memory.free",
@@ -137,6 +169,29 @@ def speak(ctx: typer.Context,
 
 @app.command()
 @handled
+def narrate(ctx: typer.Context,
+            deck: Annotated[Path, typer.Argument(exists=True, file_okay=False,
+                                                 help="html-deck folder with presentation-map.json.")],
+            narration: Annotated[Optional[Path], typer.Option(
+                help="presentation-ja's folder (script.json, checked/). Default: <deck>/narration.")]
+            = None,
+            voice: VoiceOption = None,
+            force: Annotated[bool, typer.Option(help="Resynthesize every slide, not just changed ones.")]
+            = False):
+    """Turn presentation-ja's checked per-slide script into narration audio and a player.
+
+    Writes <narration>/audio/<slide>.wav, narration.wav, timeline.json and player.html."""
+    config = load_config(ctx, voice)
+    ensure_server(config)
+    result = narrate_deck(config, deck, narration, force, log=lambda line: typer.echo(line, err=True))
+    folder = narration or deck / "narration"
+    typer.echo(json.dumps({"player": str(folder / "player.html"), "audio": str(folder / "narration.wav"),
+                           "timeline": str(folder / "timeline.json"), "slides": len(result["slides"]),
+                           "total_seconds": result["total_seconds"]}, ensure_ascii=False, indent=2))
+
+
+@app.command()
+@handled
 def say(ctx: typer.Context,
         text: Annotated[Optional[list[str]], typer.Argument(
             help="Text to speak once; omit to type lines interactively (/voice NAME switches).")] = None,
@@ -159,7 +214,7 @@ def api(ctx: typer.Context,
         port: Annotated[int, typer.Option(help="Port to listen on.")] = 8000,
         api_key: Annotated[Optional[str], typer.Option(
             envvar="PRESENTER_TTS_API_KEY",
-            help="Bearer key clients must send; default: generated once into .runtime/api-key.txt.")]
+            help="Bearer key clients must send; default: generated once into <home>/api-key.txt.")]
         = None):
     """Serve an OpenAI-compatible speech API: POST /v1/audio/speech.
 
@@ -242,7 +297,7 @@ def voice_add(
 @voice_app.command("list")
 @handled
 def voice_list(ctx: typer.Context):
-    """Show registered voices; * marks the one presenter.local.toml uses."""
+    """Show registered voices; * marks the one config.toml uses."""
     current = Path(load_config(ctx).get("voice", "default")).stem
     typer.echo(f"{'*' if current == 'default' else ' '} default  (model's own voice)")
     for profile in voices.profiles():
