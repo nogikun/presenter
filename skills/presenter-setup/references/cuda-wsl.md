@@ -25,7 +25,7 @@
 ```powershell
 .\tools\setup-s2.ps1 -CudaRoot 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9' -CheckOnly
 .\tools\setup-s2.ps1 -CudaRoot 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9'
-uv run presenter-tts server start
+uv run --project "<presenter>/tools" presenter-tts server start
 ```
 
 `-CheckOnly`はファイルとコンパイラーバージョンの確認で、MSVCとの組み合わせやGPU実行まで保証しない。
@@ -38,28 +38,27 @@ GPUドライバーは残す。フォルダーを直接削除しない。
 
 ## 検証結果をまとめて保存する
 
-まず通常のPowerShellでリポジトリへ移動し、以下を実行する。モデルのダウンロード・インストール・WSL停止は行わない。
+通常のPowerShellで以下を実行する（`<presenter>`はpresenterスキルのフォルダ）。モデルのダウンロード・インストール・WSL停止は行わない。
 
 ```powershell
-Set-Location <このリポジトリのパス>
-uv run python tools/verify_local.py
+uv run --project "<presenter>/tools" python "<presenter>/tools/scripts/verify_local.py"
 ```
 
-テスト、SSML解析、環境診断、WSLの状態を`.runtime/validation/<日時>/report.json`へ保存する。
-uvのプロジェクトなので、別のチェックアウトでは最初に`uv sync`を実行し、`.venv`にPython 3.11と依存関係をそろえる。
+テスト、SSML解析、環境診断、WSLの状態を`<home>/cache/validation/<日時>/report.json`へ保存する。
+依存関係は`uv run --project`が初回に`<presenter>/tools/.venv`へそろえる。
 `checks_passed`がtrueでも、doctorに記録された通信や依存関係の警告・テストのスキップを確認する。実機での音声合成成功とは区別する。
 
-Toolkit導入とセットアップ後、`uv run presenter-tts server start`でTTSサーバーを起動してから、以下を実行する。
+Toolkit導入とセットアップ後、`uv run --project "<presenter>/tools" presenter-tts server start`でTTSサーバーを起動してから、以下を実行する。
 
 ```powershell
-uv run python tools/verify_local.py --synthesize --input examples/latency.ssml --runs 3
-uv run python tools/verify_local.py --synthesize --input examples/presentation.ssml
+uv run --project "<presenter>/tools" python "<presenter>/tools/scripts/verify_local.py" --synthesize --input "<presenter>/tools/examples/latency.ssml" --runs 3
+uv run --project "<presenter>/tools" python "<presenter>/tools/scripts/verify_local.py" --synthesize --input "<presenter>/tools/examples/presentation.ssml"
 ```
 
 音声は`outputs/validation-<日時>/`へ保存する。再生せずに最初のPCMまでの時間とRTFを測る。
 最初の試行は初回処理の影響を含む可能性があるため、2・3回目とも比較する。
 速度だけでなく、保存した音声で読み抜け、音切れ、声の一貫性、間、強調を聴いて確認する。
-10層・18層・36層などを比較するときは、`server stop`で止めてから`presenter.local.toml`の`[server] gpu_layers`を変えて起動し直す。同時に複数起動しない。
+10層・18層・36層などを比較するときは、`server stop`で止めてから`<home>/config.toml`の`[server] gpu_layers`を変えて起動し直す。同時に複数起動しない。
 
 ## WSLの確認
 
@@ -73,10 +72,10 @@ Get-Content "$env:USERPROFILE\.wslconfig"
 ```
 
 使用するディストリビューションがWSL **2**であることを確認する。
-必要なら`wsl --update`でWSLを更新する。WSL内で、このリポジトリへのパスを指定して読み取り専用診断を実行する。
+必要なら`wsl --update`でWSLを更新する。WSL内で、presenterスキルのフォルダを指定して読み取り専用診断を実行する。
 
 ```bash
-bash /mnt/c/<このリポジトリのパス>/tools/check-wsl.sh
+bash "/mnt/c/<presenterスキルのフォルダ>/tools/scripts/check-wsl.sh"
 ```
 
 診断スクリプトのWSL上での実行は未検証。この実行環境ではWSLとGit Bashの起動が拒否されており、Bashによる構文検証も実施できていない。
@@ -87,7 +86,7 @@ WSLでs2.cppをビルドする場合:
 - WSL-Ubuntu用のインストーラーか、`cuda-toolkit-X-Y`パッケージを選ぶ。ドライバーを含む`cuda`、`cuda-X-Y`、`cuda-drivers`を選ばない。Windowsの11.8を消してもLinuxのToolkitは更新されない。
 - Linux側の`nvcc --version`が12.4以上で、`nvidia-smi`がGPUを認識することを確認する。PATHにWindowsの`nvcc.exe`が混ざっていないか確認する。
 - ソース・モデル・ビルド出力はLinuxのホーム配下に置く。Windows版と同じCMakeビルドディレクトリを共用しない。ビルド方法は[s2.cppの上流手順](https://github.com/rodrigomatta/s2.cpp)に従う。
-- Linux側のサーバーは`127.0.0.1:3030`に限定して起動する。Windows側のコントローラーから`uv run presenter-tts doctor`で到達性を確認する。localhost転送は既定で有効。届かない場合はWSLバージョンとネットワーク設定を確認してから変更する。
+- Linux側のサーバーは`127.0.0.1:3030`に限定して起動する。Windows側のコントローラーから`uv run --project "<presenter>/tools" presenter-tts doctor`で到達性を確認する。localhost転送は既定で有効。届かない場合はWSLバージョンとネットワーク設定を確認してから変更する。
 
 `memory=16GB`はWSL全体のシステムRAM上限で、GPUのVRAMを増やす設定ではない。
 今回のQ4モデルでまず維持し、Linux側の`free -h`やOOMログを確認してから調整する。
