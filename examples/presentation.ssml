@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<speak xmlns="http://www.w3.org/2001/10/synthesis" version="1.1" xml:lang="ja-JP">
+  <mark name="slide_01"/>
+  <s>今日は、検索精度を改善する方法をご紹介します。</s>
+  <break time="500ms"/>
+  <s><emphasis level="moderate">重要なのは、必要な情報を選び出すことです。</emphasis></s>
+  <break time="800ms"/>
+  <mark name="slide_02"/>
+  <s><prosody rate="90%">では、<sub alias="リランカー">Reranker</sub>を使う方法を見ていきましょう。</prosody></s>
+</speak>
