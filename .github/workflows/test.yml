@@ -1,0 +1,27 @@
+# Unit tests on a GPU-less Windows runner. s2.cpp, the model and HTTP are stubbed in the tests,
+# so no engine build or model download happens here; real synthesis is checked on a GPU machine.
+name: test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      # Several tests skip without FFmpeg; install it so every test actually runs.
+      - name: Install FFmpeg
+        run: choco install ffmpeg --yes --no-progress
+      - name: Install dependencies from uv.lock
+        run: uv sync --locked
+      - name: Run tests
+        run: uv run python -m unittest discover -s tests -v
