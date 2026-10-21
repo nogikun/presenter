@@ -85,8 +85,12 @@ s2.cppのエンジンとS2 Proのモデルは**Fish Audio Research License**で�
 設定ファイルがなければ、見本をコピーする（既存のものは上書きしない）。
 
 ```powershell
-$config = Join-Path $env:LOCALAPPDATA 'presenter-tts\config.toml'
-if (-not (Test-Path $config)) { Copy-Item "<presenter>/tools/presenter.example.toml" $config }
+$ttsHome = if ($env:PRESENTER_TTS_HOME) { $env:PRESENTER_TTS_HOME } else { Join-Path $env:LOCALAPPDATA 'presenter-tts' }
+$config = Join-Path $ttsHome 'config.toml'
+if (-not (Test-Path -LiteralPath $config)) {
+    New-Item -ItemType Directory -Path $ttsHome -Force | Out-Null
+    Copy-Item "<presenter>/tools/presenter.example.toml" -Destination $config
+}
 ```
 
 ## 5. 音が出るか確かめる

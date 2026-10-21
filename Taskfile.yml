@@ -16,4 +16,4 @@ tasks:
     desc: Install environment
     cmds:
       - git config --local commit.template .commit-template
-      - uv sync
+      - uv sync --locked --project "{{.TASKFILE_DIR}}/skills/presenter/tools"

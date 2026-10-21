@@ -38,9 +38,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - name: Run offline skill checks
+      - name: Run presentation skill checks
         env:
           PYTHONUTF8: '1'
-        run: |
-          python -m unittest discover -s tests -p test_presentation_skill.py -v
-          python -m unittest discover -s tests -p test_html_deck_bridge.py -v
+        run: python -m unittest discover -s tests -p test_presentation_skill.py -v
+      - name: Run html-deck bridge checks
+        env:
+          PYTHONUTF8: '1'
+        run: python -m unittest discover -s tests -p test_html_deck_bridge.py -v

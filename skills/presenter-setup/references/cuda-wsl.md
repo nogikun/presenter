@@ -23,8 +23,8 @@
 3. 新しいPowerShellで、インストールした実際のパスを指定して確認・ビルドする。以下は12.9を標準の場所へ入れた場合。
 
 ```powershell
-.\tools\setup-s2.ps1 -CudaRoot 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9' -CheckOnly
-.\tools\setup-s2.ps1 -CudaRoot 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9'
+& "<presenter>/tools/scripts/setup-s2.ps1" -CudaRoot 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9' -CheckOnly
+& "<presenter>/tools/scripts/setup-s2.ps1" -CudaRoot 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9'
 uv run --project "<presenter>/tools" presenter-tts server start
 ```
 
@@ -32,7 +32,7 @@ uv run --project "<presenter>/tools" presenter-tts server start
 ビルド成功時に選択したToolkitの場所を記録し、`server start`はそのDLLをプロセス内のPATHで優先する。永続的なPATHは変更しない。
 同じビルドディレクトリを異なるToolkitへ変更してCMakeが拒否した場合は、既存ビルドを別名で保管してから再構成する。
 
-11.8の削除はユーザー許可済み。新しい版でビルドと音声生成を確認してから、Windowsの「インストールされているアプリ」で11.8のToolkit関連コンポーネントをアンインストールする。
+古いToolkitを削除するかはユーザーが決める。削除する場合は、新しい版でビルドと音声生成を確認してから、Windowsの「インストールされているアプリ」で行う。このスキルからは削除しない。
 GPUドライバーは残す。フォルダーを直接削除しない。
 既存プロジェクトが11.8のコンパイラーを参照していないか確認し、削除後にPATHと`CUDA_PATH`を確認する。
 
