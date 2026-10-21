@@ -26,7 +26,9 @@ def browser():
 
 def screenshot(exe, page, png, profile, width, height):
     # html-deck slides are 1600x900; the device scale factor renders them at the video size.
+    # Reduced motion turns off the slides' entrance animation; otherwise the shot catches it half faded in.
     subprocess.run([exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run",
+                    "--force-prefers-reduced-motion",
                     f"--user-data-dir={profile}", "--window-size=1600,900",
                     f"--force-device-scale-factor={width / 1600}", "--virtual-time-budget=5000",
                     f"--screenshot={png}", page.as_uri()],

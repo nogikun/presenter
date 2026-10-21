@@ -208,6 +208,18 @@ class NarrateTests(unittest.TestCase):
         self.assertFalse((self.deck / 'narration/audio').exists())
 
 
+class ScreenshotTests(unittest.TestCase):
+    def test_turns_off_motion_so_entrance_animations_are_not_caught_half_faded(self):
+        png = Path(tempfile.mkdtemp()) / 'slide.png'
+
+        def chrome(cmd, **kwargs):  # Stand-in for headless Chrome: it only writes the file.
+            png.write_bytes(b'png')
+
+        with patch('presenter_tts.video.subprocess.run', side_effect=chrome) as run:
+            video.screenshot('chrome', Path('slide.html').resolve(), png, png.parent, 1920, 1080)
+        self.assertIn('--force-prefers-reduced-motion', run.call_args.args[0])
+
+
 @unittest.skipUnless(shutil.which('ffmpeg') and shutil.which('ffprobe'), 'needs FFmpeg')
 class VideoTests(unittest.TestCase):
     def test_exports_mp4_matching_the_narration_and_links_it(self):
