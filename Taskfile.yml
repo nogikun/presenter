@@ -16,7 +16,4 @@ tasks:
     desc: Install environment
     cmds:
       - git config --local commit.template .commit-template
-      - mise trust .mise.toml
-      - mise install
-      # - pipx install pre-commit
-      # - pre-commit install
+      - uv sync

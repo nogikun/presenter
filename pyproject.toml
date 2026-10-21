@@ -1,0 +1,15 @@
+[build-system]
+requires = ["uv_build>=0.9.5,<0.13"]
+build-backend = "uv_build"
+
+[project]
+name = "presenter-tts"
+version = "0.1.0"
+description = "Local SSML presentation speech with quantized Fish S2 Pro"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = ["typer>=0.12"]
+
+[project.scripts]
+presenter-tts = "presenter_tts.cli:app"
