@@ -105,6 +105,7 @@
                text-decoration: none; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35),
                0 4px 13px color-mix(in oklch, var(--pp-deep) 38.2%, transparent); }
   .prominent svg { width: 16px; height: 16px; }
+  [hidden] { display: none !important; }  /* Class display rules must not resurrect hidden parts. */
 
   /* Golden columns: 233 : main : 377 (Fibonacci). Either side pane can be closed (hidden). */
   .layout { display: grid; grid-template-areas: "rail main side"; grid-template-columns: 233px minmax(0, 1fr) 377px;
@@ -212,6 +213,21 @@
 
   /* Title under the screen, as wide as the screen, one line so the height budget (--now-h) holds. */
   .now { width: min(100cqw, (100cqh - var(--now-h)) * 16 / 9); height: var(--now-h); padding: var(--s3) var(--s1) 0; }
+  .now-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); min-height: 28px; }
+  .voice-tools { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
+  .voice-pick { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 var(--s1) 0 var(--s2);
+                border-radius: 999px; background: var(--field); color: var(--on-surface-variant); }
+  .voice-pick svg { width: 16px; height: 16px; flex: none; }
+  .voice-pick select { height: 100%; max-width: 13em; border: 0; background: none; color: var(--on-surface); font-size: 13px;
+                       font-weight: 500; cursor: pointer; }
+  .voice-pick select option { color: initial; }
+  .voice-pick:focus-within { outline: 3px solid var(--primary); outline-offset: 1px; }
+  .voice-pick select:focus-visible { outline: none; }  /* The pill draws the one ring. */
+  .voice-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--on-surface-variant);
+                  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .voice-status svg { width: 14px; height: 14px; flex: none; animation: spin 1s linear infinite; }
+  .voice-status.error { color: var(--primary); white-space: normal; }
+  @keyframes spin { to { transform: rotate(360deg); } }
   .now .eyebrow { font-size: 13px; font-weight: 500; color: var(--on-surface-variant); font-variant-numeric: tabular-nums; }
   .now h2 { margin: 2px 0 0; font-size: 24px; line-height: 1.25; font-weight: 700; letter-spacing: -.02em;
             overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -369,6 +385,8 @@
   <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/> <path d="M12 2v2"/> <path d="M12 20v2"/> <path d="m4.93 4.93 1.41 1.41"/> <path d="m17.66 17.66 1.41 1.41"/> <path d="M2 12h2"/> <path d="M20 12h2"/> <path d="m6.34 17.66-1.41 1.41"/> <path d="m19.07 4.93-1.41 1.41"/></symbol>
   <symbol id="i-volume-2" viewBox="0 0 24 24"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/> <path d="M16 9a5 5 0 0 1 0 6"/> <path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></symbol>
   <symbol id="i-volume-x" viewBox="0 0 24 24"><path d="M11 4.702a.7.7 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.7.7 0 0 0 11 19.298z"/> <path d="m16.5 14.5 5-5"/> <path d="m16.5 9.5 5 5"/></symbol>
+  <symbol id="i-audio-lines" viewBox="0 0 24 24"><path d="M2 10v3"/> <path d="M6 6v11"/> <path d="M10 3v18"/> <path d="M14 8v7"/> <path d="M18 5v13"/> <path d="M22 10v3"/></symbol>
+  <symbol id="i-loader-circle" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></symbol>
   <symbol id="i-panel-left-close" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/> <path d="M9 3v18"/> <path d="m16 15-3-3 3-3"/></symbol>
   <symbol id="i-panel-left-open" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/> <path d="M9 3v18"/> <path d="m14 9 3 3-3 3"/></symbol>
   <symbol id="i-panel-right-close" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/> <path d="M15 3v18"/> <path d="m8 9 3 3-3 3"/></symbol>
@@ -447,8 +465,17 @@
         </div>
       </div>
     </div>
-    <div class="now" aria-live="polite">
-      <div class="eyebrow" id="now-count"></div>
+    <div class="now">
+      <div class="now-row">
+        <div class="eyebrow" id="now-count" aria-live="polite"></div>
+        <div class="voice-tools">
+          <span class="voice-status" id="voice-status" role="status"></span>
+          <label class="voice-pick" id="voice-pick" title="読み上げの声" hidden>
+            <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-audio-lines"/></svg>
+            <select id="voice" aria-label="読み上げの声"></select>
+          </label>
+        </div>
+      </div>
       <h2 id="now-title"></h2>
     </div>
     <audio id="audio" preload="auto" src="narration.wav"></audio>
@@ -473,7 +500,8 @@
 <script>
 const timeline = /*TIMELINE*/null;
 const slides = timeline.slides;
-const total = timeline.total_seconds;
+const mainTimeline = structuredClone(timeline);  // slides[] is retimed in place when the voice changes.
+let total = timeline.total_seconds;
 const $ = (id) => document.getElementById(id);
 const audio = $("audio"), frame = $("slide"), seek = $("seek"), cueList = $("cues"), screen = $("screen");
 const reduced = matchMedia("(prefers-reduced-motion: reduce)");
@@ -495,11 +523,13 @@ document.querySelectorAll("[data-theme-choice]").forEach((b) => b.addEventListen
 setTheme(document.documentElement.dataset.theme || "system");
 
 // Every spoken sentence with its measured start; slides without cues fall back to one line.
-const cues = slides.flatMap((s, i) => (s.cues && s.cues.length ? s.cues : [{ text: s.title, start: s.start, end: s.end }])
+const cueList_ = () => slides.flatMap((s, i) => (s.cues && s.cues.length ? s.cues : [{ text: s.title, start: s.start, end: s.end }])
   .map((c) => ({ ...c, slide: i })));
+let cues = cueList_();
 
 $("deck-title").textContent = document.title = timeline.title || slides[0].title;
-if (timeline.video) { $("mp4").href = timeline.video; $("mp4").hidden = false; }
+function setVideo(url) { $("mp4").hidden = !url; if (url) $("mp4").href = url; }
+setVideo(timeline.video);
 seek.max = total;
 
 // Slide list.
@@ -508,7 +538,6 @@ const thumbs = slides.map((s, i) => {
   pic.firstChild.setAttribute("aria-hidden", "true");
   const button = el("button", { className: "thumb state", type: "button", onclick: () => jump(s.start) },
     el("span", { className: "n", textContent: i + 1 }), pic, el("span", { className: "cap", textContent: s.title }));
-  button.setAttribute("aria-label", `${i + 1}. ${s.title}（${clock(s.start)}）`);
   $("thumbs").append(el("li", {}, button));
   return button;
 });
@@ -516,7 +545,11 @@ new ResizeObserver(() => {
   const width = thumbs[0].querySelector(".pic").clientWidth;
   document.documentElement.style.setProperty("--thumb-scale", width / 1600);
 }).observe($("thumbs"));
-slides.slice(1).forEach((s) => $("ticks").append(el("i", { style: `left:${(s.start / total) * 100}%` })));
+function drawMarks() {
+  thumbs.forEach((b, i) => b.setAttribute("aria-label", `${i + 1}. ${slides[i].title}（${clock(slides[i].start)}）`));
+  $("ticks").replaceChildren(...slides.slice(1).map((s) => el("i", { style: `left:${(s.start / total) * 100}%` })));
+}
+drawMarks();
 
 // Transcript.
 const rows = [];
@@ -771,7 +804,98 @@ for (const id of Object.keys(PANES)) {
   setPane(id, store.get(`presenter-pane-${id}`) !== "closed");
 }
 
+// Voices. Each voice has its own timeline (the same sentences, timed by its own audio). A file://
+// player switches between the voices embedded when it was written; `presenter-tts play` serves the
+// player with an API that also lists voices without audio and synthesizes one when it is picked.
+const VOICE_LABEL = (v) => (v.name === "default" ? "標準の声" : v.name) + (v.ready === false ? "（未作成）" : "");
+const voiceKey = `presenter-voice:${location.pathname}`;
+let voiceList = timeline.voices || [], currentVoice = timeline.voice || "default", serverMode = false;
+
+function status(text, kind = "") {
+  const box = $("voice-status");
+  box.className = `voice-status ${kind}`;
+  box.replaceChildren();
+  if (kind === "busy") box.append(el("span", { innerHTML: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-loader-circle"/></svg>' }).firstChild);
+  if (text) box.append(text);
+}
+
+function showVoices() {
+  $("voice").replaceChildren(...voiceList.map((v) => el("option", { value: v.name, textContent: VOICE_LABEL(v), selected: v.name === currentVoice })));
+  $("voice-pick").hidden = voiceList.length < 2;
+}
+
+async function switchTo(entry) {
+  const base = new URL(entry.timeline, location.href);
+  const next = entry.data || (entry.timeline === "timeline.json" && !serverMode ? mainTimeline : await (await fetch(base, { cache: "no-store" })).json());
+  if (next.slides.length !== slides.length || next.slides.some((s, i) => s.id !== slides[i].id)) {
+    throw new Error("スライドの構成が違う音声です。narrate で作り直してください");
+  }
+  const sentence = Math.max(0, currentCue), playing = !audio.paused && !audio.ended;
+  next.slides.forEach((s, i) => Object.assign(slides[i], { start: s.start, end: s.end, cues: s.cues }));
+  total = next.total_seconds;
+  cues = cueList_();
+  seek.max = total;
+  drawMarks();
+  audio.src = new URL("narration.wav", base).href;
+  // Stay on the same sentence; the new voice says it at its own time.
+  audio.currentTime = cues[Math.min(sentence, cues.length - 1)].start;
+  setVideo(entry.video ? new URL(entry.video, base).href : null);
+  currentVoice = entry.name;
+  store.set(voiceKey, entry.name === (timeline.voice || "default") ? null : entry.name);
+  renderCues($("search").value);
+  showVoices();
+  if (playing) audio.play();
+}
+
+const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
+async function synthesize(name) {
+  const started = await fetch("/api/narrate", { method: "POST", headers: { "Content-Type": "application/json" },
+                                                body: JSON.stringify({ voice: name }) });
+  if (!started.ok) throw new Error((await started.json()).error);
+  for (;;) {
+    const job = await (await fetch("/api/job", { cache: "no-store" })).json();
+    if (job.state === "error") throw new Error(job.message || "音声を作れませんでした");
+    if (job.state === "done" && job.voice === name) return;
+    status(`${VOICE_LABEL({ name })}の音声を作成中${job.total ? ` ${job.done}/${job.total}` : "…"}`, "busy");
+    await sleep(1000);
+  }
+}
+
+async function chooseVoice(name) {
+  try {
+    let entry = voiceList.find((v) => v.name === name);
+    if (entry.ready === false) {
+      $("voice").disabled = true;
+      await synthesize(name);
+      voiceList = (await (await fetch("/api/voices", { cache: "no-store" })).json()).voices;
+      entry = voiceList.find((v) => v.name === name);
+    }
+    await switchTo(entry);
+    status("");
+  } catch (error) {
+    status(error.message, "error");
+    showVoices();  // Back to the voice that is playing.
+  } finally {
+    $("voice").disabled = false;
+  }
+}
+$("voice").addEventListener("change", (e) => chooseVoice(e.target.value));
+
+async function loadVoices() {
+  if (location.protocol.startsWith("http")) {
+    try {
+      const answer = await fetch("/api/voices", { cache: "no-store" });
+      if (answer.ok) { voiceList = (await answer.json()).voices; serverMode = true; }
+    } catch {}
+  }
+  showVoices();
+  const remembered = store.get(voiceKey);
+  const entry = voiceList.find((v) => v.name === remembered && v.ready !== false);
+  if (entry && entry.name !== currentVoice) chooseVoice(entry.name);
+}
+
 renderCues();
+loadVoices();
 </script>
 </body>
 </html>

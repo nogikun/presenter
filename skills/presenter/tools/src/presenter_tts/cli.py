@@ -8,12 +8,14 @@ import subprocess
 import sys
 import tomllib
 from typing import Annotated, Optional
+import webbrowser
 
 import typer
 
 from . import api as speech_api, server, voices
 from .audio import AudioError, Backend, render
-from .narrate import narrate as narrate_deck
+from .narrate import narrate as narrate_deck, read_json, voice_name as narrate_voice
+from .play import server as play_server
 from .say import say as say_loop
 from .video import export as export_video
 from .ssml import MAX_BYTES, SSMLError, compile_ssml, event_dict
@@ -211,6 +213,48 @@ def video(deck: Annotated[Path, typer.Argument(exists=True, file_okay=False, hel
     result = export_video(narration or deck / "narration", output, width, width * 9 // 16 // 2 * 2, fps,
                           log=lambda line: typer.echo(line, err=True))
     typer.echo(json.dumps(result, ensure_ascii=False, indent=2))
+
+
+@app.command()
+@handled
+def play(ctx: typer.Context,
+         deck: Annotated[Path, typer.Argument(exists=True, file_okay=False, help="html-deck folder.")],
+         narration: Annotated[Optional[Path], typer.Option(
+             help="presentation-ja's folder (script.json, checked/). Default: <deck>/narration.")] = None,
+         checked: Annotated[Optional[Path], typer.Option(
+             help="Checked output folder containing receipt.json. Default: <narration>/checked.")] = None,
+         port: Annotated[int, typer.Option(help="Port on 127.0.0.1; 0 picks a free one.")] = 0,
+         open_browser: Annotated[bool, typer.Option("--open/--no-open", help="Open the player.")] = True):
+    """Serve the player with a voice picker until Ctrl+C. A voice without audio is synthesized
+    when picked (into <narration>/voices/<name>/); with no narration yet, the configured voice
+    is synthesized first."""
+    folder = narration or deck / "narration"
+
+    def synthesize(name, log=lambda line: None):
+        config = load_config(ctx, name)
+        ensure_server(config)
+        main = folder / "timeline.json"
+        current = read_json(main).get("voice", "default") if main.is_file() else None
+        chosen = narrate_voice(config)
+        out = None if current in (None, chosen) else folder / "voices" / chosen
+
+        def report(line):
+            typer.echo(f"{chosen}: {line}", err=True)
+            log(line)
+        narrate_deck(config, deck, narration, log=report, checked=checked, out=out)
+
+    if not (folder / "timeline.json").is_file():
+        typer.echo("No narration yet; synthesizing the configured voice first.", err=True)
+        synthesize(None)
+    httpd, url = play_server(deck, folder, synthesize, port)
+    typer.echo(json.dumps({"player": url}, ensure_ascii=False), err=False)
+    sys.stdout.flush()
+    if open_browser:
+        webbrowser.open(url)
+    try:
+        httpd.serve_forever()
+    finally:
+        httpd.server_close()
 
 
 @app.command()
