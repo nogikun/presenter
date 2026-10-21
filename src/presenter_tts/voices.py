@@ -14,7 +14,7 @@ import wave
 
 from .audio import AudioError
 
-PROJECT = Path(__file__).resolve().parents[1]
+PROJECT = Path(__file__).resolve().parents[2]  # src/presenter_tts/voices.py -> repository root
 # Like uv: .runtime holds what can be rebuilt (engine, model, caches) and may be deleted any time;
 # voices/ holds profiles and recordings that cannot be, so it lives apart (both gitignored).
 RUNTIME = PROJECT / ".runtime"
