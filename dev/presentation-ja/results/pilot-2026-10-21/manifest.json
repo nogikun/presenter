@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-10-21T12:07:32.519249+00:00",
+  "dataset_sha256": "caa3d1b8942393a63b30f1098917a491f4acdcf1c7b78f800b5bc10d4c6097e3",
+  "policy_sha256": {
+    "SKILL.md": "2824f61ff3e5de07e24b74408ca2aac0e25614de252b7151808f5ac2028181ef",
+    "references/contract.md": "9cb6b0b309ab59e5783609bc6baa35d4231293361f0c13561907677bc7673ccd",
+    "references/rubric.md": "9fda8735c47828db4ce49d918bb4dc4fb5474100dcf753bac10aaebadeb17e7d",
+    "references/writing.md": "135d72967a7420a527d206d5462eab5c0df2fbd51c6fd612c7d4c28ebe004d62"
+  },
+  "checker_sha256": "df6a1f44bdd839dccc43ab5df88668f37c7e11e8d1635686d8f8694f916242a6",
+  "split": "development",
+  "model": "unknown (inherited session model)",
+  "snapshot_phase": "after_generation",
+  "trials_per_case": 1,
+  "human_listening": "not_assessed",
+  "holdout_status": "not_assessed",
+  "generation_settings": "host defaults; exact settings and token/time telemetry unavailable",
+  "limitations": [
+    "Exploratory agent trials. Initial snapshot was recorded after generation, not a pre-registered benchmark."
+  ]
+}

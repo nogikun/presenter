@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "checker_version": "0.1.0",
+  "status": "needs_review",
+  "hard_errors": [],
+  "review_findings": [
+    {
+      "rule": "number_not_in_sources",
+      "segment_id": "results",
+      "excerpt": "2",
+      "message": "資料にない数値の候補。言い換えや計算も含め意味を確認する。"
+    },
+    {
+      "rule": "number_not_in_sources",
+      "segment_id": "discussion",
+      "excerpt": "2",
+      "message": "資料にない数値の候補。言い換えや計算も含め意味を確認する。"
+    },
+    {
+      "rule": "estimated_over_budget",
+      "message": "概算の上限が持ち時間を超える。音読または生成音声で確認する。"
+    }
+  ],
+  "timing": {
+    "counted_letters_and_numbers": 479,
+    "explicit_pause_seconds": 8,
+    "pace_cpm": {
+      "slow": 240,
+      "fast": 360
+    },
+    "estimated_seconds": [
+      87.83,
+      127.75
+    ],
+    "target_seconds": 120,
+    "measured_audio_seconds": null,
+    "method": "engineering-estimate; not a validated Japanese speech-rate model"
+  },
+  "semantic_fidelity": "not_assessed",
+  "human_listening": "not_assessed",
+  "notice": "No quality score. No findings does not establish factual correctness or intelligibility."
+}

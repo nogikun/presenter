@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "brief_sha256": "5376f0dc772af5c30c48f857deabb1fd24b418e39ef284379397f261fa3e64a1",
+  "script_sha256": "cebd6dc6fc77f126a361ae0126e27fc84a617bfe54b83d5d0a5844a9f9d2b13f",
+  "checker_sha256": "df6a1f44bdd839dccc43ab5df88668f37c7e11e8d1635686d8f8694f916242a6",
+  "policy_sha256": {
+    "SKILL.md": "2824f61ff3e5de07e24b74408ca2aac0e25614de252b7151808f5ac2028181ef",
+    "references/contract.md": "9cb6b0b309ab59e5783609bc6baa35d4231293361f0c13561907677bc7673ccd",
+    "references/rubric.md": "9fda8735c47828db4ce49d918bb4dc4fb5474100dcf753bac10aaebadeb17e7d",
+    "references/writing.md": "135d72967a7420a527d206d5462eab5c0df2fbd51c6fd612c7d4c28ebe004d62"
+  },
+  "measured_audio_seconds": null,
+  "outputs": {
+    "manuscript.txt": "5263232b1012ad5a8ff5829feef73dd8a09f94754c588de1272a41df968c999a",
+    "speaker-notes.md": "e381852c42bbeabdde4c3ef82d5143022b4d3d775d5689162b4ef72d085f564c",
+    "check.json": "ef2084119e40237071742406f6048255c7f351b892b0cf199f585c7cba2daa21"
+  }
+}

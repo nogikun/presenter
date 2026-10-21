@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "checker_version": "0.1.0",
+  "status": "mechanical_checks_completed",
+  "hard_errors": [],
+  "review_findings": [],
+  "timing": {
+    "counted_letters_and_numbers": 381,
+    "explicit_pause_seconds": 5,
+    "pace_cpm": {
+      "slow": 240,
+      "fast": 360
+    },
+    "estimated_seconds": [
+      68.5,
+      100.25
+    ],
+    "target_seconds": 120,
+    "measured_audio_seconds": null,
+    "method": "engineering-estimate; not a validated Japanese speech-rate model"
+  },
+  "semantic_fidelity": "not_assessed",
+  "human_listening": "not_assessed",
+  "notice": "No quality score. No findings does not establish factual correctness or intelligibility."
+}

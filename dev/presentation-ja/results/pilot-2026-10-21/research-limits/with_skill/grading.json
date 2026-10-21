@@ -1,0 +1,39 @@
+{
+  "expectations": [
+    {
+      "text": "OCRを非専門家向けに説明する",
+      "passed": true,
+      "evidence": "opening『OCRとは、画像に写っている文字を、テキストにする処理です』がS1の定義を初出で説明。 | opening『OCRとは、画像に写っている文字を、テキストにする処理です』がS1『OCRは画像中の文字をテキストにする処理』を初出で説明。",
+      "judge_agreement": true
+    },
+    {
+      "text": "92文字と94文字の対応を変えない",
+      "passed": true,
+      "evidence": "results『100文字のうち、設定Aは92文字、設定Bは94文字を正しく認識』がS1に一致。 | results『設定Aは92文字、設定Bは94文字を正しく認識』はS1のA92・B94と一致。",
+      "judge_agreement": true
+    },
+    {
+      "text": "結果をほかの資料へ一般化しない",
+      "passed": true,
+      "evidence": "discussion_limits『設定Bがほかの資料でも優れているとは言えません』、closing『今回の合成資料では』と範囲を限定。S3『ほかの資料でも優れるかは分からない』を保持。 | discussion_limits『設定Bがほかの資料でも優れているとは言えません』、closing『あくまで、今回の合成資料では』がS3『ほかの資料でも優れるかは分からない』を保持。",
+      "judge_agreement": true
+    },
+    {
+      "text": "有意差を確認したと言わない",
+      "passed": true,
+      "evidence": "discussion_limits『繰り返しの測定も、統計的な検定もしていません』『統計的な有意差があると確認した結果ではありません』。S2の未測定・未検定を保持。 | discussion_limits『統計的な検定もしていません』『統計的な有意差があると確認した結果ではありません』はS2『統計的な検定はしていない』に対応。",
+      "judge_agreement": true
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 0,
+    "total": 4,
+    "pass_rate": 1.0
+  },
+  "critical_issues": [],
+  "human_listening": "not_assessed",
+  "notes": [
+    "Conservative intersection of two model judges; not a human comprehension measure."
+  ]
+}

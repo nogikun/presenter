@@ -1,0 +1,39 @@
+{
+  "expectations": [
+    {
+      "text": "OCRを非専門家向けに説明する",
+      "passed": true,
+      "evidence": "opening『OCRは、画像中の文字をテキストにする処理です』がS1の定義を初出近くで説明。 | opening『OCRは、画像中の文字をテキストにする処理です』はS1の定義を本文で説明し、読み方もcueとglossaryで示す。",
+      "judge_agreement": true
+    },
+    {
+      "text": "92文字と94文字の対応を変えない",
+      "passed": true,
+      "evidence": "results『設定Aは92文字、設定Bは94文字』、closing『Aが92文字、Bが94文字』がS1と一致。2文字は両数値の算術的差分。 | results『設定Aは92文字、設定Bは94文字』とclosing『Aが92文字、Bが94文字』はS1に一致。二文字の差は94−92で対応を変えない。",
+      "judge_agreement": true
+    },
+    {
+      "text": "結果をほかの資料へ一般化しない",
+      "passed": true,
+      "evidence": "discussion『設定Bのほうが常に優れているとは言えません』に加え、closing『この結果をほかの資料にそのまま当てはめることはできません』。S3の不明条件を保持。 | discussion『設定Bのほうが常に優れているとは言えません』、closing『この結果をほかの資料にそのまま当てはめることはできません』がS3『ほかの資料でも優れるかは分からない』を保持。",
+      "judge_agreement": true
+    },
+    {
+      "text": "有意差を確認したと言わない",
+      "passed": true,
+      "evidence": "discussion『繰り返し測定と統計的な検定はしていません』『統計的に意味のある差だと確認したわけではありません』。後者の用語には改善余地があるが、S2に反して検定済みとは主張しない。 | discussion『繰り返し測定と統計的な検定はしていません』『統計的に意味のある差だと確認したわけではありません』はS2の検定未実施を保持。",
+      "judge_agreement": true
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 0,
+    "total": 4,
+    "pass_rate": 1.0
+  },
+  "critical_issues": [],
+  "human_listening": "not_assessed",
+  "notes": [
+    "Conservative intersection of two model judges; not a human comprehension measure."
+  ]
+}
