@@ -1,0 +1,141 @@
+{
+  "evaluator_kind": "independent-model",
+  "model": "unknown (inherited session)",
+  "presentation_order": ["B", "A"],
+  "cases": [
+    {
+      "name": "novice-rrf",
+      "winner": "B",
+      "reasoning": "両候補とも資料の仕組みと精度に関する留保を保持し、全assertionsを満たす。Bはprocessで『何番目』から計算、同一文書の合算、並べ直しまでを短く説明し、closingでも同じ文書ごとの合算を再確認できる。Aは導入が丁寧だが名称と定義の繰り返しで一分枠に対する余裕が小さくなるため、初学者が手順を聞く時間を取りやすいBを選ぶ。文字量による予測判断であり、実際の理解度は未評価。",
+      "candidates": {
+        "A": {
+          "critical_issues": [],
+          "dimensions": {
+            "fidelity": {"score": 5, "evidence": "mechanism『順位をもとに値を計算』『同じ文書が複数の検索結果にあれば、その文書の値を足し合わせます』はS1『各結果の順位をもとに値を計算し、同じ文書の値を足して並べ直す』に対応。closing『検索精度の改善を実験していません』もS2を保持。", "suggestion": "事実の修正は不要。"},
+            "audience_fit": {"score": 4, "evidence": "opening『その結果をどうまとめるか』で必要性を示し、mechanism『文書が何位にあるか』でS1の『順位』を具体化。一方『スコア』は本文で説明されず、briefの『検索の技術を知らない同僚』には一段の補助があるとよい。", "suggestion": "スコアを『検索ごとにつけられる点数』程度に短く言い換える。"},
+            "structure": {"score": 4, "evidence": "openingで定義、mechanismで『まず』『次に』『そして』、closingで要点とS2の留保という順。opening『アールアールエフです。RRFは』と定義が連続し、最終文は留保で終わる。", "suggestion": "導入の名称・定義を一度にし、留保のあとに仕組みを一言で締める。"},
+            "spoken_japanese": {"score": 4, "evidence": "mechanism『まず、その順位をもとに値を計算します。次に』は一文一動作でS1の手順を追える。opening『アールアールエフです。RRFは』は音声では同じ名称が続く。テキストからの予測評価。", "suggestion": "名称の連続を一回に整理する。"},
+            "pacing": {"score": 3, "evidence": "briefの60秒に対し本文317文字、明記されたセグメント後の間は計2秒。mechanismのcue『少し間を取り』も必要で、ゆっくりという想定に対して導入の重複が時間を使う。実際の発話時間は未計測。", "suggestion": "openingの名称と定義の重複を削り、手順と留保の間を含めて一分で音読確認する。"},
+            "delivery_readiness": {"score": 4, "evidence": "mechanismのcue『「まず」「次に」「そして」で少し間を取り』がtextから分離され、pause_after_secondsもある。RRFの読みはglossaryにあるがopeningは読みと英字が連続する。", "suggestion": "発表時に読む名称を一本化して本文を確定する。"}
+          },
+          "expectations": [
+            {"text": "順位を使った統合を説明する", "passed": true, "evidence": "mechanism『その順位をもとに値を計算』『その文書の値を足し合わせます』『文書を並べ直します』がS1の三つの処理に対応。"},
+            {"text": "異なる検索方式のスコアを直接足すと説明しない", "passed": true, "evidence": "mechanism『検索方式ごとのスコアを直接比べない』と明示。合算対象は『順位をもとに』計算した『同じ文書』の値で、S1『検索方式ごとのスコアを直接比較しない』を維持。"},
+            {"text": "実測した精度向上を作らない", "passed": true, "evidence": "closing『今回は検索精度の改善を実験していません』『どんな検索でも精度が上がるとは言い切れません』がS2に対応し、本文に改善実績の追加なし。"},
+            {"text": "本文に数式の読み上げを入れない", "passed": true, "evidence": "opening・mechanism・closingの全文に数式なし。mechanism『順位をもとに値を計算』という言葉の説明に留まり、taskの『数式の読み上げは不要』に適合。"}
+          ]
+        },
+        "B": {
+          "critical_issues": [],
+          "dimensions": {
+            "fidelity": {"score": 5, "evidence": "process『何番目にあるか』『順位をもとに値を計算』『同じ文書の値を足し合わせ、その合計で文書を並べ直します』はS1に対応。limit『ここでは検索精度の改善を実験していません』がS2の未実験を保つ。", "suggestion": "事実の修正は不要。"},
+            "audience_fit": {"score": 4, "evidence": "process『同じ文書が、違う検索の結果に出てくる場面』『何番目』でbriefの初学者向けにS1『同じ文書』『順位』を具体化。ただし『スコア』は説明されない。", "suggestion": "スコアを『検索方式ごとにつける点数』などに短く言い換える。"},
+            "structure": {"score": 5, "evidence": "openingでS1の定義、processで仕組み、limitでS2の制限、closing『同じ文書ごとに足して』で核を再提示。留保を挟んでも最後に仕組みへ戻れる。", "suggestion": "現在の順序を維持する。"},
+            "spoken_japanese": {"score": 5, "evidence": "process『まず、それぞれの検索で、その文書が何番目にあるかを見ます。その順位をもとに値を計算します。次に』はS1の手順を短い文で分けている。closingも対象を『同じ文書ごと』と特定。テキストからの予測評価。", "suggestion": "processの『まず』『次に』の区切りを音読で確認する。"},
+            "pacing": {"score": 4, "evidence": "briefの60秒に対し本文276文字、明記された間は計3秒。processが説明の中心で、limitにも独立した間がある。長さは概ね収まりやすいが実話速は未測定。", "suggestion": "専門語と処理の区切りを含めて実際に一分で読めるか測る。"},
+            "delivery_readiness": {"score": 5, "evidence": "opening『方法の名前をはっきり発音』、process『処理の区切り』、limit『留保の内容を急がず』、closing『順位、同じ文書』というcueがtextと分離。S1の手順とS2の留保それぞれに発話の意図がある。", "suggestion": "現在のcueを用いて音読確認する。"}
+          },
+          "expectations": [
+            {"text": "順位を使った統合を説明する", "passed": true, "evidence": "process『その順位をもとに値を計算』『同じ文書の値を足し合わせ、その合計で文書を並べ直します』がS1の仕組みを説明。"},
+            {"text": "異なる検索方式のスコアを直接足すと説明しない", "passed": true, "evidence": "process『検索方式ごとのスコアを、そのまま比べるわけではありません』はS1の直接比較しない条件を維持。合算は順位から計算した同じ文書の値と明記。"},
+            {"text": "実測した精度向上を作らない", "passed": true, "evidence": "limit『ここでは検索精度の改善を実験していません。どんな検索でも精度が上がる、とは言えません』がS2を保持し、他セグメントにも実績追加なし。"},
+            {"text": "本文に数式の読み上げを入れない", "passed": true, "evidence": "opening・process・limit・closingの本文全体に数式なし。S1の計算は『順位をもとに値を計算』という説明に留まる。"}
+          ]
+        }
+      }
+    },
+    {
+      "name": "proposal-conditions",
+      "winner": "B",
+      "reasoning": "両候補とも測定条件、中央値、未確認事項と最後の許可依頼を保持し、criticalはない。Bは判断に使う中央値を本文で説明し、同時アクセスも複数利用者の言葉に置き換え、知識が混在する上司向けの理解を支えるため僅かに優先する。Aには冒頭から本番の未確認を示し短くまとめる強みがある。Bの『三秒』は10秒と7秒の差の算術的な言い換えで、新しい観測や全条件での改善主張ではない。",
+      "candidates": {
+        "A": {
+          "critical_issues": [],
+          "dimensions": {
+            "fidelity": {"score": 5, "evidence": "measurement『合成の検証データ百文書を、同じ端末』『中央値は、既存方式が十秒、提案方式が七秒』がS1に対応。limits『本番環境』『同時にアクセス』『費用は未確認』『全社導入は決定していません』がS2の全留保を保持。", "suggestion": "事実の修正は不要。"},
+            "audience_fit": {"score": 4, "evidence": "proposal『対象を限定した試験導入』とdecision『許可いただけるか』はbriefの上司の判断に直結。measurementはS1の『中央値』をそのまま用い、mixedな前提知識への説明はない。", "suggestion": "中央値に『値を順に並べたときの中央の値』と短い説明を添える。"},
+            "structure": {"score": 5, "evidence": "proposalで提案と留保を示し、measurementでS1、limitsでS2、decisionでS3『処理時間と検索結果を確認』と許可依頼につなぐ。主張と判断材料が対応。", "suggestion": "現在の論理順を維持する。"},
+            "spoken_japanese": {"score": 4, "evidence": "measurement『既存方式が十秒、提案方式が七秒』は比較対象が明確。limits『判断にあたっての留保』はやや書き言葉だが、S2の事項を短文で順に話す。テキストによる予測評価。", "suggestion": "『判断にあたっての留保』を『まだ確認できていない点』とする。"},
+            "pacing": {"score": 4, "evidence": "briefの90秒に対し本文387文字、明記された間は計3秒。四部構成で測定・未確認事項・判断依頼へ時間を割ける量。ただし実発話時間は未測定。", "suggestion": "数字の区切りと最後の依頼で間を取り、90秒の音読で確認する。"},
+            "delivery_readiness": {"score": 5, "evidence": "measurementのcue『十秒と七秒を、それぞれ区切って』、decisionのcue『聞き手に向けて、求める判断を伝える』をtextと分け、全セグメントにpause_after_secondsがある。S1とS3の伝達箇所を明示。", "suggestion": "数値と最後の許可依頼を重点に読み合わせる。"}
+          },
+          "expectations": [
+            {"text": "測定条件と中央値を保持する", "passed": true, "evidence": "measurement『合成の検証データ百文書を、同じ端末で処理』『処理時間の中央値は、既存方式が十秒、提案方式が七秒』がS1の条件・単位・対応を全て保持。"},
+            {"text": "未確認の費用削減を作らない", "passed": true, "evidence": "limits『費用は未確認』『費用の削減を約束できる段階ではありません』がS2『費用は未確認』に対応。削減額や実績を追加しない。"},
+            {"text": "全社導入を決定済みとしない", "passed": true, "evidence": "limits『全社導入は決定していません』はS2をそのまま保持。proposalとdecisionも限定試験の提案としている。"},
+            {"text": "最後に試験導入の判断を求める", "passed": true, "evidence": "最終decision『限定した対象への試験導入を許可いただけるか、ご判断をお願いします』がS3『求める判断は限定した対象への試験導入の許可』に対応。"}
+          ]
+        },
+        "B": {
+          "critical_issues": [],
+          "dimensions": {
+            "fidelity": {"score": 5, "evidence": "measurement『合成の検証データ百文書』『同じ端末』『中央値』『既存方式が十秒、提案方式が七秒』はS1を保持。『この条件では、三秒』は10−7の説明。limitsでS2の本番・同時アクセス・費用・全社導入の留保を保持。", "suggestion": "三秒の差を述べるときは現在の『この条件では』を維持する。"},
+            "audience_fit": {"score": 5, "evidence": "measurement『中央値は、測定値を順に並べたときの中央の値』、limits『複数の利用者が同時にアクセスした場合』がS1・S2の用語を説明。closing『許可いただけるか』でbriefの意思決定へつなぐ。", "suggestion": "現在の用語説明と許可依頼を維持する。"},
+            "structure": {"score": 5, "evidence": "openingで限定試験を提案し、measurementがS1の測定、limitsがS2の未確認事項、closingがS3の確認計画と判断依頼という順でつながる。", "suggestion": "現在の順序を維持する。"},
+            "spoken_japanese": {"score": 4, "evidence": "measurement『既存方式が十秒、提案方式が七秒』と説明を区切り、S1の数字は追いやすい。opening『確かめる機会をいただきたいと考えています』とclosing『確かめ、その結果を次の判断につなげたいと考えています』はやや長い。テキスト上の予測。", "suggestion": "『試験で確かめたいと考えています』などに一箇所絞って短くする。"},
+            "pacing": {"score": 4, "evidence": "briefの90秒に対し本文444文字、明記された間は計3秒。中央値の説明で時間を使うが、測定・留保・依頼は独立し概算可能。数値をゆっくり話した実時間は未確認。", "suggestion": "90秒で音読し、必要ならopeningとclosingの『確かめる』の重複を短縮する。"},
+            "delivery_readiness": {"score": 5, "evidence": "measurementのcue『十秒と七秒を、区切ってゆっくり』、closingのcue『上司に視線を向けて』がtextから分離。S1の数値とS3の判断依頼に対応し、全体にpause_after_secondsを指定。", "suggestion": "現在のcueに従って読み合わせる。"}
+          },
+          "expectations": [
+            {"text": "測定条件と中央値を保持する", "passed": true, "evidence": "measurement『合成の検証データ百文書を、同じ端末』『処理時間の中央値は、既存方式が十秒、提案方式が七秒』がS1の条件と値を保持。三秒はこの二値の差で、追加測定ではない。"},
+            {"text": "未確認の費用削減を作らない", "passed": true, "evidence": "limits『費用も未確認で、費用が削減できるとは現時点では言えません』がS2の費用未確認を明示し、削減の観測追加なし。"},
+            {"text": "全社導入を決定済みとしない", "passed": true, "evidence": "limits『全社導入も決定していません』がS2と一致。opening・closingは限定試験を求めている。"},
+            {"text": "最後に試験導入の判断を求める", "passed": true, "evidence": "最終closing『この限定した対象への試験導入を許可いただけるか、ご判断をお願いします』がS3の許可依頼に対応。"}
+          ]
+        }
+      }
+    },
+    {
+      "name": "research-limits",
+      "winner": "TIE",
+      "reasoning": "両候補ともOCRの説明、A92文字・B94文字の対応、未実施項目、一般化不能と検定未実施を保持する。Aはmethodを独立させ、問い→条件→結果→考察の区別が特に明瞭。Bは短く、数値差の二文字を明示し、読み方・数値のcueと長めの間を備える。BのOCR定義の重複、Aの長さと専門語説明不足を含め、目的に照らして一方に決める決定的な差はない。Bの二文字は94−92からの算術的説明であり、別の測定追加ではない。",
+      "candidates": {
+        "A": {
+          "critical_issues": [],
+          "dimensions": {
+            "fidelity": {"score": 5, "evidence": "method『同じ書体の印刷文字』『一種類の合成資料』『100文字』はS1・S2を保持。results『設定Aは92文字、設定Bは94文字』はS1と一致。discussion_limits『繰り返しの測定も、統計的な検定もしていません』と一般化の留保はS2・S3に対応。", "suggestion": "事実の修正は不要。"},
+            "audience_fit": {"score": 4, "evidence": "opening『OCRとは、画像に写っている文字を、テキストにする処理』がS1を非専門家向けに説明し、比較の問いも示す。ただしdiscussion_limits『統計的な有意差』は本文・glossaryとも説明がない。", "suggestion": "有意差の語には『差が偶然のばらつきで説明できるかを調べていない』程度の説明を添える。"},
+            "structure": {"score": 5, "evidence": "openingで問い、methodでS1・S2の条件、results『ここまでが、検証で観測したこと』、discussion_limits『ここからは、考察と限界』で境界を明示し、closingでS3の次の検証へつなぐ。", "suggestion": "現在の結果と考察の区切りを維持する。"},
+            "spoken_japanese": {"score": 4, "evidence": "resultsは『設定Aは92文字、設定Bは94文字』と対象が明確。opening『今回の問いは、同じ資料を使ったときに、設定Aと設定Bで、正しく認識できる文字の数がどう違うかです』は修飾が続く。テキストによる予測。", "suggestion": "問いを『同じ資料を使います。二つの設定で、正しく読める文字数がどう違うかを比べました』などに分ける。"},
+            "pacing": {"score": 4, "evidence": "briefの120秒に対し本文596文字、明記された間は計5秒。条件・結果・考察を五区分で扱うが、初学者に統計用語を説明する余地は小さめ。実際の話速・所要時間は未測定。", "suggestion": "問いと最後の説明を短縮し、数値と考察への切り替えに間を確保して二分で音読する。"},
+            "delivery_readiness": {"score": 4, "evidence": "各セグメントのtextとpause_after_secondsは分離し、resultsの後は2秒。glossaryにOCRの読みはあるが、数値の読み方や強調のcueはない。S1のA/Bの対応を発話でも確実にする段取りが一段欲しい。", "suggestion": "resultsに『設定名と文字数を対にして区切る』というcueを加える。"}
+          },
+          "expectations": [
+            {"text": "OCRを非専門家向けに説明する", "passed": true, "evidence": "opening『OCRとは、画像に写っている文字を、テキストにする処理です』がS1『OCRは画像中の文字をテキストにする処理』を初出で説明。"},
+            {"text": "92文字と94文字の対応を変えない", "passed": true, "evidence": "results『設定Aは92文字、設定Bは94文字を正しく認識』はS1のA92・B94と一致。"},
+            {"text": "結果をほかの資料へ一般化しない", "passed": true, "evidence": "discussion_limits『設定Bがほかの資料でも優れているとは言えません』、closing『あくまで、今回の合成資料では』がS3『ほかの資料でも優れるかは分からない』を保持。"},
+            {"text": "有意差を確認したと言わない", "passed": true, "evidence": "discussion_limits『統計的な検定もしていません』『統計的な有意差があると確認した結果ではありません』はS2『統計的な検定はしていない』に対応。"}
+          ]
+        },
+        "B": {
+          "critical_issues": [],
+          "dimensions": {
+            "fidelity": {"score": 5, "evidence": "opening『合成資料の印刷文字100文字』、results『設定Aは92文字、設定Bは94文字』がS1と一致。discussionでS2の同一書体・一種類・手書き数式未実施・繰り返しと検定未実施を保持し、closingはS3の次の比較を述べる。二文字は94−92の算術的説明。", "suggestion": "二文字差は現在の『今回の資料では』という限定を維持する。"},
+            "audience_fit": {"score": 4, "evidence": "openingはS1のOCRを『画像の文字を読み取る処理』と導入し、『画像中の文字をテキストにする』と説明。discussion『統計的に意味のある差』は専門語を和らげるが、glossaryの検定の説明は発話本文にはない。", "suggestion": "OCRの説明は一度にし、その分で検定未実施の意味を短く補う。"},
+            "structure": {"score": 4, "evidence": "results『結果です』とdiscussion『続いて考察です』でtaskの区別を満たす。S2『同じ書体の一種類だけ』はdiscussionで初めて提示するため、比較の条件を結果前にまとめると観測範囲がより追いやすい。", "suggestion": "同じ書体・一種類の条件だけopeningの比較説明へ移す。"},
+            "spoken_japanese": {"score": 4, "evidence": "results『設定Bが設定Aより2文字多く』でS1の差を具体化し、discussionは短文で限界を列挙。opening『画像の文字を読み取る処理、OCR』『OCRは、画像中の文字をテキストにする処理』は近接して重複。テキストからの予測。", "suggestion": "OCRの定義を一文にまとめる。"},
+            "pacing": {"score": 4, "evidence": "briefの120秒に対し本文519文字、明記された間は計8秒。results後3秒、discussion後2秒を確保し、数値と留保を受け止める配分が見える。実際の所要時間は未測定。", "suggestion": "実音読で二分を測り、必要ならOCR定義の重複を削って考察の理解時間に回す。"},
+            "delivery_readiness": {"score": 5, "evidence": "openingのcue『OCRは「オーシーアール」と読む』、resultsのcue『92文字と94文字をゆっくり区切って』をtextと分離。results後3秒など、S1の数値からS2・S3の考察へ切り替える間も指定。", "suggestion": "現在の読み方と数値のcueを用いて読み合わせる。"}
+          },
+          "expectations": [
+            {"text": "OCRを非専門家向けに説明する", "passed": true, "evidence": "opening『OCRは、画像中の文字をテキストにする処理です』はS1の定義を本文で説明し、読み方もcueとglossaryで示す。"},
+            {"text": "92文字と94文字の対応を変えない", "passed": true, "evidence": "results『設定Aは92文字、設定Bは94文字』とclosing『Aが92文字、Bが94文字』はS1に一致。二文字の差は94−92で対応を変えない。"},
+            {"text": "結果をほかの資料へ一般化しない", "passed": true, "evidence": "discussion『設定Bのほうが常に優れているとは言えません』、closing『この結果をほかの資料にそのまま当てはめることはできません』がS3『ほかの資料でも優れるかは分からない』を保持。"},
+            {"text": "有意差を確認したと言わない", "passed": true, "evidence": "discussion『繰り返し測定と統計的な検定はしていません』『統計的に意味のある差だと確認したわけではありません』はS2の検定未実施を保持。"}
+          ]
+        }
+      }
+    }
+  ],
+  "human_listening": "not_assessed",
+  "eval_feedback": {
+    "scope": "rubricと各brief.json・task.json、および各ケースのB.json→A.jsonだけで評価。手法名、対応キー、他評価者の出力は参照していない。候補の自己評価や想定時間は検証根拠にしていない。",
+    "critical_review": "資料にない観測、数値・単位・条件・担当・時期・否定・確信の重大な変更は検出しなかった。中央値や検定の用語説明と、与えられた二値の差の説明は、新しい実験結果の追加と区別した。",
+    "scoring": "六観点を別々に評価し、合計・平均による判定はしていない。spoken_japaneseとpacingは本文、文字量、明記された間からの予測。文字数は本文の文字列長であり、音読時の音数や実話速ではない。",
+    "limits": "三つの合成ケースを同系モデルで比較する探索的評価であり、一般的な優位性を示さない。実音声の自然さ、実話速、聴取理解度は未確認。",
+    "actual_audio": "not_assessed",
+    "comprehension_test": "not_assessed",
+    "speech_synthesis": "not_assessed",
+    "held_out_evaluation": "not_assessed"
+  }
+}

@@ -1,0 +1,50 @@
+# Copy to %LOCALAPPDATA%\presenter-tts\config.toml (or pass --config) and adjust. Values below are
+# the defaults measured on an RTX 3080 (10 GB) with the Q4_K_M model; other GPUs may need others.
+backend = "s2cpp"
+url = "http://127.0.0.1:3030"
+timeout = 120
+# Default voice: a name from voices/ (uv run presenter-tts voice list), or a .s2voice path.
+# Without it the model's own voice is used, which can vary between sentences.
+# voice = "myvoice"
+
+[server]
+# say/speak/api start the TTS server in the background when it is not running.
+auto_start = true
+# Layers on the GPU (36 = all, about 4 GB of VRAM); lower it if the server fails to start.
+gpu_layers = 36
+# Run the audio codec on the GPU too (faster); false keeps it on the CPU.
+codec_gpu = true
+
+[generation]
+max_new_tokens = 768
+# Fewer, larger streaming decode steps: stride 4 measured RTF 1.88, stride 16 about 1.4.
+stream_decode_stride_frames = 16
+stream_holdback_frames = 8
+# Per-sentence head start so live playback does not run dry while generation is slower than
+# real time; measured need was ~40-47 ms per character.
+stream_start_buffer_ms_per_char = 50
+
+[say]
+# Cut sentences longer than this at 、 (outside 「」 and （）) into ~this-long requests (0 = off).
+max_chars = 40
+# Request the first clause (up to the first 、) on its own so speech starts sooner.
+split_first_clause = true
+# Play a cached えーと-style filler in the current voice only when the first audio is late.
+filler = true
+# ~1 s still feels like a natural response without a filler (Shiwa et al., HRI 2008).
+filler_after_ms = 1000
+# Even when late, play one only this often (0-1).
+filler_probability = 0.7
+# Expected first-audio time = base + per_char x characters of the first request; a filler is
+# skipped unless it can finish before then. Early-side fit of a measured ~770 + 72.
+arrival_base_ms = 650
+arrival_ms_per_char = 60
+# A filler take longer than this (after trimming silence) is treated as a runaway and not used.
+filler_max_seconds = 1.5
+# Each playback shifts pitch by up to this many semitones and speed within this range.
+filler_pitch_semitones = 1.0
+filler_rate_min = 0.85
+filler_rate_max = 1.1
+filler_fade_ms = 30
+
+# For VOICEVOX instead of s2.cpp, see docs/tts.md (backend/url/speaker go at the root).

@@ -1,0 +1,39 @@
+{
+  "expectations": [
+    {
+      "text": "測定条件と中央値を保持する",
+      "passed": true,
+      "evidence": "measurement『合成の検証データ百文書を、同じ端末で処理』『中央値は、既存方式が十秒、提案方式が七秒』がS1と一致。三秒は両中央値の算術的差分。 | measurement『合成の検証データ百文書を、同じ端末』『処理時間の中央値は、既存方式が十秒、提案方式が七秒』がS1の条件と値を保持。三秒はこの二値の差で、追加測定ではない。",
+      "judge_agreement": true
+    },
+    {
+      "text": "未確認の費用削減を作らない",
+      "passed": true,
+      "evidence": "limits『費用も未確認で、費用が削減できるとは現時点では言えません』はS2の未確認を維持。 | limits『費用も未確認で、費用が削減できるとは現時点では言えません』がS2の費用未確認を明示し、削減の観測追加なし。",
+      "judge_agreement": true
+    },
+    {
+      "text": "全社導入を決定済みとしない",
+      "passed": true,
+      "evidence": "limits『全社導入も決定していません』がS2と一致。 | limits『全社導入も決定していません』がS2と一致。opening・closingは限定試験を求めている。",
+      "judge_agreement": true
+    },
+    {
+      "text": "最後に試験導入の判断を求める",
+      "passed": true,
+      "evidence": "closing末尾『この限定した対象への試験導入を許可いただけるか、ご判断をお願いします』がS3に一致。 | 最終closing『この限定した対象への試験導入を許可いただけるか、ご判断をお願いします』がS3の許可依頼に対応。",
+      "judge_agreement": true
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 0,
+    "total": 4,
+    "pass_rate": 1.0
+  },
+  "critical_issues": [],
+  "human_listening": "not_assessed",
+  "notes": [
+    "Conservative intersection of two model judges; not a human comprehension measure."
+  ]
+}

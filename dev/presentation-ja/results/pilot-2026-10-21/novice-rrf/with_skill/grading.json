@@ -1,0 +1,39 @@
+{
+  "expectations": [
+    {
+      "text": "順位を使った統合を説明する",
+      "passed": true,
+      "evidence": "process『その順位をもとに値を計算』『同じ文書の値を足し合わせ、その合計で文書を並べ直します』。S1と対応。 | process『その順位をもとに値を計算』『同じ文書の値を足し合わせ、その合計で文書を並べ直します』がS1の仕組みを説明。",
+      "judge_agreement": true
+    },
+    {
+      "text": "異なる検索方式のスコアを直接足すと説明しない",
+      "passed": true,
+      "evidence": "process『検索方式ごとのスコアを、そのまま比べるわけではありません』。合算対象を順位から計算した値とするためS1を保持。 | process『検索方式ごとのスコアを、そのまま比べるわけではありません』はS1の直接比較しない条件を維持。合算は順位から計算した同じ文書の値と明記。",
+      "judge_agreement": true
+    },
+    {
+      "text": "実測した精度向上を作らない",
+      "passed": true,
+      "evidence": "limit『検索精度の改善を実験していません』『どんな検索でも精度が上がる、とは言えません』がS2と一致。 | limit『ここでは検索精度の改善を実験していません。どんな検索でも精度が上がる、とは言えません』がS2を保持し、他セグメントにも実績追加なし。",
+      "judge_agreement": true
+    },
+    {
+      "text": "本文に数式の読み上げを入れない",
+      "passed": true,
+      "evidence": "全textを確認。processはS1の手順を言葉で述べ、式や式の読み上げはない。 | opening・process・limit・closingの本文全体に数式なし。S1の計算は『順位をもとに値を計算』という説明に留まる。",
+      "judge_agreement": true
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 0,
+    "total": 4,
+    "pass_rate": 1.0
+  },
+  "critical_issues": [],
+  "human_listening": "not_assessed",
+  "notes": [
+    "Conservative intersection of two model judges; not a human comprehension measure."
+  ]
+}

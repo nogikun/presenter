@@ -18,10 +18,14 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
+          cache-dependency-glob: skills/presenter/tools/uv.lock
       # Several tests skip without FFmpeg; install it so every test actually runs.
       - name: Install FFmpeg
         run: choco install ffmpeg --yes --no-progress
+      # The presenter skill carries its own uv project, as installed by `npx skills add`.
       - name: Install dependencies from uv.lock
+        working-directory: skills/presenter/tools
         run: uv sync --locked
       - name: Run tests
+        working-directory: skills/presenter/tools
         run: uv run python -m unittest discover -s tests -v

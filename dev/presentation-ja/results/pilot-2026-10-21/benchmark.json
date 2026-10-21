@@ -1,0 +1,285 @@
+{
+  "metadata": {
+    "skill_name": "presentation-ja",
+    "executor_model": "unknown (inherited session model)",
+    "runs_per_configuration": 1,
+    "timestamp": "2026-10-21T12:15:17.659343+00:00",
+    "evals_run": [
+      1,
+      2,
+      3
+    ]
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "eval_name": "novice-rrf",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "pass_rate": 1.0,
+        "time_seconds": null,
+        "tokens": null,
+        "critical_issue_count": 0
+      },
+      "expectations": [
+        {
+          "text": "順位を使った統合を説明する",
+          "passed": true,
+          "evidence": "process『その順位をもとに値を計算』『同じ文書の値を足し合わせ、その合計で文書を並べ直します』。S1と対応。 | process『その順位をもとに値を計算』『同じ文書の値を足し合わせ、その合計で文書を並べ直します』がS1の仕組みを説明。",
+          "judge_agreement": true
+        },
+        {
+          "text": "異なる検索方式のスコアを直接足すと説明しない",
+          "passed": true,
+          "evidence": "process『検索方式ごとのスコアを、そのまま比べるわけではありません』。合算対象を順位から計算した値とするためS1を保持。 | process『検索方式ごとのスコアを、そのまま比べるわけではありません』はS1の直接比較しない条件を維持。合算は順位から計算した同じ文書の値と明記。",
+          "judge_agreement": true
+        },
+        {
+          "text": "実測した精度向上を作らない",
+          "passed": true,
+          "evidence": "limit『検索精度の改善を実験していません』『どんな検索でも精度が上がる、とは言えません』がS2と一致。 | limit『ここでは検索精度の改善を実験していません。どんな検索でも精度が上がる、とは言えません』がS2を保持し、他セグメントにも実績追加なし。",
+          "judge_agreement": true
+        },
+        {
+          "text": "本文に数式の読み上げを入れない",
+          "passed": true,
+          "evidence": "全textを確認。processはS1の手順を言葉で述べ、式や式の読み上げはない。 | opening・process・limit・closingの本文全体に数式なし。S1の計算は『順位をもとに値を計算』という説明に留まる。",
+          "judge_agreement": true
+        }
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "novice-rrf",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "pass_rate": 1.0,
+        "time_seconds": null,
+        "tokens": null,
+        "critical_issue_count": 0
+      },
+      "expectations": [
+        {
+          "text": "順位を使った統合を説明する",
+          "passed": true,
+          "evidence": "mechanism『その順位をもとに値を計算』『同じ文書…値を足し合わせ』『文書を並べ直します』。S1の順位→計算→合算→並べ直しと対応。 | mechanism『その順位をもとに値を計算』『その文書の値を足し合わせます』『文書を並べ直します』がS1の三つの処理に対応。",
+          "judge_agreement": true
+        },
+        {
+          "text": "異なる検索方式のスコアを直接足すと説明しない",
+          "passed": true,
+          "evidence": "mechanism『検索方式ごとのスコアを直接比べない』と明示し、足すのは『順位をもとに』計算した値。S1『検索方式ごとのスコアを直接比較しない』を保持。 | mechanism『検索方式ごとのスコアを直接比べない』と明示。合算対象は『順位をもとに』計算した『同じ文書』の値で、S1『検索方式ごとのスコアを直接比較しない』を維持。",
+          "judge_agreement": true
+        },
+        {
+          "text": "実測した精度向上を作らない",
+          "passed": true,
+          "evidence": "closing『今回は検索精度の改善を実験していません。どんな検索でも精度が上がるとは言い切れません』。S2の否定と留保を保持。 | closing『今回は検索精度の改善を実験していません』『どんな検索でも精度が上がるとは言い切れません』がS2に対応し、本文に改善実績の追加なし。",
+          "judge_agreement": true
+        },
+        {
+          "text": "本文に数式の読み上げを入れない",
+          "passed": true,
+          "evidence": "全textを確認。mechanismは『順位をもとに値を計算』という言葉で説明し、数式や式の読みを含まない。S1も数式を提示していない。 | opening・mechanism・closingの全文に数式なし。mechanism『順位をもとに値を計算』という言葉の説明に留まり、taskの『数式の読み上げは不要』に適合。",
+          "judge_agreement": true
+        }
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "proposal-conditions",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "pass_rate": 1.0,
+        "time_seconds": null,
+        "tokens": null,
+        "critical_issue_count": 0
+      },
+      "expectations": [
+        {
+          "text": "測定条件と中央値を保持する",
+          "passed": true,
+          "evidence": "measurement『合成の検証データ百文書を、同じ端末で処理』『中央値は、既存方式が十秒、提案方式が七秒』。S1の対象・環境・統計量・対応を保持。 | measurement『合成の検証データ百文書を、同じ端末で処理』『処理時間の中央値は、既存方式が十秒、提案方式が七秒』がS1の条件・単位・対応を全て保持。",
+          "judge_agreement": true
+        },
+        {
+          "text": "未確認の費用削減を作らない",
+          "passed": true,
+          "evidence": "limits『費用は未確認です。費用の削減を約束できる段階ではありません』。S2『費用は未確認』に沿う。 | limits『費用は未確認』『費用の削減を約束できる段階ではありません』がS2『費用は未確認』に対応。削減額や実績を追加しない。",
+          "judge_agreement": true
+        },
+        {
+          "text": "全社導入を決定済みとしない",
+          "passed": true,
+          "evidence": "limits『全社導入は決定していません』がS2と一致。 | limits『全社導入は決定していません』はS2をそのまま保持。proposalとdecisionも限定試験の提案としている。",
+          "judge_agreement": true
+        },
+        {
+          "text": "最後に試験導入の判断を求める",
+          "passed": true,
+          "evidence": "最後のdecision『限定した対象への試験導入を許可いただけるか、ご判断をお願いします』がS3の求める判断と一致。 | 最終decision『限定した対象への試験導入を許可いただけるか、ご判断をお願いします』がS3『求める判断は限定した対象への試験導入の許可』に対応。",
+          "judge_agreement": true
+        }
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "proposal-conditions",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "pass_rate": 1.0,
+        "time_seconds": null,
+        "tokens": null,
+        "critical_issue_count": 0
+      },
+      "expectations": [
+        {
+          "text": "測定条件と中央値を保持する",
+          "passed": true,
+          "evidence": "measurement『合成の検証データ百文書を、同じ端末で処理』『中央値は、既存方式が十秒、提案方式が七秒』がS1と一致。三秒は両中央値の算術的差分。 | measurement『合成の検証データ百文書を、同じ端末』『処理時間の中央値は、既存方式が十秒、提案方式が七秒』がS1の条件と値を保持。三秒はこの二値の差で、追加測定ではない。",
+          "judge_agreement": true
+        },
+        {
+          "text": "未確認の費用削減を作らない",
+          "passed": true,
+          "evidence": "limits『費用も未確認で、費用が削減できるとは現時点では言えません』はS2の未確認を維持。 | limits『費用も未確認で、費用が削減できるとは現時点では言えません』がS2の費用未確認を明示し、削減の観測追加なし。",
+          "judge_agreement": true
+        },
+        {
+          "text": "全社導入を決定済みとしない",
+          "passed": true,
+          "evidence": "limits『全社導入も決定していません』がS2と一致。 | limits『全社導入も決定していません』がS2と一致。opening・closingは限定試験を求めている。",
+          "judge_agreement": true
+        },
+        {
+          "text": "最後に試験導入の判断を求める",
+          "passed": true,
+          "evidence": "closing末尾『この限定した対象への試験導入を許可いただけるか、ご判断をお願いします』がS3に一致。 | 最終closing『この限定した対象への試験導入を許可いただけるか、ご判断をお願いします』がS3の許可依頼に対応。",
+          "judge_agreement": true
+        }
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "research-limits",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "pass_rate": 1.0,
+        "time_seconds": null,
+        "tokens": null,
+        "critical_issue_count": 0
+      },
+      "expectations": [
+        {
+          "text": "OCRを非専門家向けに説明する",
+          "passed": true,
+          "evidence": "opening『OCRとは、画像に写っている文字を、テキストにする処理です』がS1の定義を初出で説明。 | opening『OCRとは、画像に写っている文字を、テキストにする処理です』がS1『OCRは画像中の文字をテキストにする処理』を初出で説明。",
+          "judge_agreement": true
+        },
+        {
+          "text": "92文字と94文字の対応を変えない",
+          "passed": true,
+          "evidence": "results『100文字のうち、設定Aは92文字、設定Bは94文字を正しく認識』がS1に一致。 | results『設定Aは92文字、設定Bは94文字を正しく認識』はS1のA92・B94と一致。",
+          "judge_agreement": true
+        },
+        {
+          "text": "結果をほかの資料へ一般化しない",
+          "passed": true,
+          "evidence": "discussion_limits『設定Bがほかの資料でも優れているとは言えません』、closing『今回の合成資料では』と範囲を限定。S3『ほかの資料でも優れるかは分からない』を保持。 | discussion_limits『設定Bがほかの資料でも優れているとは言えません』、closing『あくまで、今回の合成資料では』がS3『ほかの資料でも優れるかは分からない』を保持。",
+          "judge_agreement": true
+        },
+        {
+          "text": "有意差を確認したと言わない",
+          "passed": true,
+          "evidence": "discussion_limits『繰り返しの測定も、統計的な検定もしていません』『統計的な有意差があると確認した結果ではありません』。S2の未測定・未検定を保持。 | discussion_limits『統計的な検定もしていません』『統計的な有意差があると確認した結果ではありません』はS2『統計的な検定はしていない』に対応。",
+          "judge_agreement": true
+        }
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "research-limits",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "pass_rate": 1.0,
+        "time_seconds": null,
+        "tokens": null,
+        "critical_issue_count": 0
+      },
+      "expectations": [
+        {
+          "text": "OCRを非専門家向けに説明する",
+          "passed": true,
+          "evidence": "opening『OCRは、画像中の文字をテキストにする処理です』がS1の定義を初出近くで説明。 | opening『OCRは、画像中の文字をテキストにする処理です』はS1の定義を本文で説明し、読み方もcueとglossaryで示す。",
+          "judge_agreement": true
+        },
+        {
+          "text": "92文字と94文字の対応を変えない",
+          "passed": true,
+          "evidence": "results『設定Aは92文字、設定Bは94文字』、closing『Aが92文字、Bが94文字』がS1と一致。2文字は両数値の算術的差分。 | results『設定Aは92文字、設定Bは94文字』とclosing『Aが92文字、Bが94文字』はS1に一致。二文字の差は94−92で対応を変えない。",
+          "judge_agreement": true
+        },
+        {
+          "text": "結果をほかの資料へ一般化しない",
+          "passed": true,
+          "evidence": "discussion『設定Bのほうが常に優れているとは言えません』に加え、closing『この結果をほかの資料にそのまま当てはめることはできません』。S3の不明条件を保持。 | discussion『設定Bのほうが常に優れているとは言えません』、closing『この結果をほかの資料にそのまま当てはめることはできません』がS3『ほかの資料でも優れるかは分からない』を保持。",
+          "judge_agreement": true
+        },
+        {
+          "text": "有意差を確認したと言わない",
+          "passed": true,
+          "evidence": "discussion『繰り返し測定と統計的な検定はしていません』『統計的に意味のある差だと確認したわけではありません』。後者の用語には改善余地があるが、S2に反して検定済みとは主張しない。 | discussion『繰り返し測定と統計的な検定はしていません』『統計的に意味のある差だと確認したわけではありません』はS2の検定未実施を保持。",
+          "judge_agreement": true
+        }
+      ]
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      }
+    }
+  },
+  "notes": [
+    "Pass rate is frozen task assertions only; no aggregate quality score.",
+    "Time/token telemetry unavailable; null is not zero.",
+    "All input materials are synthetic. Human listening and holdout evaluation are not assessed.",
+    "Single trial per case, same model family; exploratory, not superiority evidence."
+  ]
+}

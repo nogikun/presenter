@@ -1,0 +1,54 @@
+{
+  "skill_name": "presenter",
+  "notes": "Run every eval with PRESENTER_TTS_HOME pointing at a throwaway copy of the home folder, so the cleanup evals cannot delete real voices or the shared engine. narrate evals need a GPU machine with the engine set up (presenter-setup).",
+  "evals": [
+    {
+      "id": 1,
+      "name": "narrate-checked-deck",
+      "skill": "presenter",
+      "prompt": "outputs/e2e-deck に html-deck で作ったスライドがあって、presentation-ja で原稿も検査済みです。これを myvoice の声で読み上げて、解説動画に使える音声にしてください。",
+      "expected_output": "doctor で準備を確かめ、narrate を --voice myvoice でバックグラウンド実行し、目安の時間を先に伝える。narration/player.html・narration.wav・timeline.json・audio/<id>.wav を作り、player を開いて一部を聞いたうえで、場所・長さ・声・聞いた範囲を報告する。原稿は書き換えない。",
+      "files": ["outputs/e2e-deck"]
+    },
+    {
+      "id": 2,
+      "name": "no-script-yet",
+      "skill": "presenter",
+      "prompt": "このスライド（outputs/e2e-deck-noscript）にナレーションを付けて動画っぽくしたいんだけど、どうすればいい？",
+      "expected_output": "narration/script.json と checked/receipt.json がないことを確かめ、自分で原稿を書かずに presentation-ja で原稿作成と検査を先に行う。検査後に narrate で音声とプレーヤーを作り、動画が求められていれば video で MP4 も書き出す。未生成の成果物を完成したとは報告しない。",
+      "files": ["outputs/e2e-deck-noscript"]
+    },
+    {
+      "id": 3,
+      "name": "cleanup-keep-voices",
+      "skill": "presenter",
+      "prompt": "presenter のデータで C ドライブがかなり埋まってる。しばらく使わないので空けたいけど、自分の声は残しておいて。",
+      "expected_output": "references/cleanup.md に従い、容量を一覧にし、消す範囲（cache/）と消した後に起きること（再セットアップが必要）を見せて確認を取る。サーバーを止めてから cache/ だけを消し、voices/・config.toml・api-key.txt は残す。消した後に容量を再確認して報告する。",
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "setup-from-scratch",
+      "skill": "presenter-setup",
+      "prompt": "新しいPCに presenter のスキルを入れたので、音声合成が使えるようにセットアップして。",
+      "expected_output": "doctor で不足を調べ、足りないソフトは winget のコマンドと容量を見せて承認を得てから入れる。Fish Audio Research License（非商用）を説明して同意を得る。setup-s2.ps1 を -CheckOnly のあと本番をバックグラウンドで実行し、say で音が出るかをユーザーに確かめ、報告する。",
+      "files": []
+    },
+    {
+      "id": 5,
+      "name": "player-design-and-transcript",
+      "skill": "presenter",
+      "prompt": "検査済みのスライド（outputs/e2e-deck）に音声を付けて。話している文をテキストで選んで、そこから聞けるプレーヤーにしたい。",
+      "expected_output": "narrate で player.html を作る。スライド一覧・再生操作・文字起こしがあり、文を選ぶとその文の実測の開始時刻へ移ることを、ブラウザで最初・途中・最後の文について確かめる。検索とコピーができること、狭い幅でも崩れないことを確かめて、確かめた範囲を報告する。",
+      "files": ["outputs/e2e-deck"]
+    },
+    {
+      "id": 6,
+      "name": "mp4-export-with-real-output",
+      "skill": "presenter",
+      "prompt": "この検査済みデッキを、音声付きのMP4にも書き出してください。スライドの最初から最後まで入れて、一般的な動画プレーヤーで再生できるものにして。",
+      "expected_output": "narrate の後に presenter-tts video で presentation.mp4 を書き出す（既定 1920x1080・30fps・H.264/AAC）。ffprobe の結果と全長を報告し、先頭・中間・末尾のフレームを見てスライドの順と切り替わりを確かめる。ブラウザや FFmpeg が足りなければ、そのことを伝えて完成とは言わない。",
+      "files": ["outputs/e2e-deck"]
+    }
+  ]
+}

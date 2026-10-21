@@ -1,0 +1,48 @@
+name: presentation-skill
+
+on:
+  push:
+    paths:
+      - 'skills/presentation-ja/**'
+      - 'dev/presentation-ja/evaluate.py'
+      - 'dev/presentation-ja/evals.json'
+      - 'dev/presentation-ja/trigger-evals.json'
+      - 'tests/test_presentation_skill.py'
+      - 'tests/test_html_deck_bridge.py'
+      - '.github/workflows/presentation-skill.yml'
+  pull_request:
+    paths:
+      - 'skills/presentation-ja/**'
+      - 'dev/presentation-ja/evaluate.py'
+      - 'dev/presentation-ja/evals.json'
+      - 'dev/presentation-ja/trigger-evals.json'
+      - 'tests/test_presentation_skill.py'
+      - 'tests/test_html_deck_bridge.py'
+      - '.github/workflows/presentation-skill.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ['3.11', '3.13']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Run presentation skill checks
+        env:
+          PYTHONUTF8: '1'
+        run: python -m unittest discover -s tests -p test_presentation_skill.py -v
+      - name: Run html-deck bridge checks
+        env:
+          PYTHONUTF8: '1'
+        run: python -m unittest discover -s tests -p test_html_deck_bridge.py -v

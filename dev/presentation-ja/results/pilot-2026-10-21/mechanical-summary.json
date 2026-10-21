@@ -1,0 +1,213 @@
+{
+  "schema_version": 1,
+  "runs": [
+    {
+      "eval_id": 1,
+      "eval_name": "novice-rrf",
+      "configuration": "with_skill",
+      "time_seconds": null,
+      "tokens": null,
+      "generation_status": "completed",
+      "semantic_fidelity": "not_assessed",
+      "mechanical_status": "needs_review",
+      "review_findings": [
+        {
+          "rule": "estimated_over_budget",
+          "message": "概算の上限が持ち時間を超える。音読または生成音声で確認する。"
+        }
+      ],
+      "timing": {
+        "counted_letters_and_numbers": 253,
+        "explicit_pause_seconds": 3,
+        "pace_cpm": {
+          "slow": 240,
+          "fast": 360
+        },
+        "estimated_seconds": [
+          45.17,
+          66.25
+        ],
+        "target_seconds": 60,
+        "measured_audio_seconds": null,
+        "method": "engineering-estimate; not a validated Japanese speech-rate model"
+      },
+      "script_sha256": "e849f2a996fa8c59ff3facf35910011b48b727814b81eb3c9c96b27d46ae1023"
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "novice-rrf",
+      "configuration": "without_skill",
+      "time_seconds": null,
+      "tokens": null,
+      "generation_status": "completed",
+      "semantic_fidelity": "not_assessed",
+      "mechanical_status": "needs_review",
+      "review_findings": [
+        {
+          "rule": "estimated_over_budget",
+          "message": "概算の上限が持ち時間を超える。音読または生成音声で確認する。"
+        }
+      ],
+      "timing": {
+        "counted_letters_and_numbers": 290,
+        "explicit_pause_seconds": 2,
+        "pace_cpm": {
+          "slow": 240,
+          "fast": 360
+        },
+        "estimated_seconds": [
+          50.33,
+          74.5
+        ],
+        "target_seconds": 60,
+        "measured_audio_seconds": null,
+        "method": "engineering-estimate; not a validated Japanese speech-rate model"
+      },
+      "script_sha256": "4f220dfd3cbbbc3834cf097df2d7fcd21a40534f12d9008465426eae60759d04"
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "proposal-conditions",
+      "configuration": "with_skill",
+      "time_seconds": null,
+      "tokens": null,
+      "generation_status": "completed",
+      "semantic_fidelity": "not_assessed",
+      "mechanical_status": "needs_review",
+      "review_findings": [
+        {
+          "rule": "estimated_over_budget",
+          "message": "概算の上限が持ち時間を超える。音読または生成音声で確認する。"
+        }
+      ],
+      "timing": {
+        "counted_letters_and_numbers": 354,
+        "explicit_pause_seconds": 3,
+        "pace_cpm": {
+          "slow": 240,
+          "fast": 360
+        },
+        "estimated_seconds": [
+          62.0,
+          91.5
+        ],
+        "target_seconds": 90,
+        "measured_audio_seconds": null,
+        "method": "engineering-estimate; not a validated Japanese speech-rate model"
+      },
+      "script_sha256": "cebd6dc6fc77f126a361ae0126e27fc84a617bfe54b83d5d0a5844a9f9d2b13f"
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "proposal-conditions",
+      "configuration": "without_skill",
+      "time_seconds": null,
+      "tokens": null,
+      "generation_status": "completed",
+      "semantic_fidelity": "not_assessed",
+      "mechanical_status": "needs_review",
+      "review_findings": [
+        {
+          "rule": "estimated_over_budget",
+          "message": "概算の上限が持ち時間を超える。音読または生成音声で確認する。"
+        }
+      ],
+      "timing": {
+        "counted_letters_and_numbers": 411,
+        "explicit_pause_seconds": 3,
+        "pace_cpm": {
+          "slow": 240,
+          "fast": 360
+        },
+        "estimated_seconds": [
+          71.5,
+          105.75
+        ],
+        "target_seconds": 90,
+        "measured_audio_seconds": null,
+        "method": "engineering-estimate; not a validated Japanese speech-rate model"
+      },
+      "script_sha256": "01860e61e6b6c9b5a6479bc801ac42d6958967b307c3503cdd9734efa1d9edd0"
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "research-limits",
+      "configuration": "with_skill",
+      "time_seconds": null,
+      "tokens": null,
+      "generation_status": "completed",
+      "semantic_fidelity": "not_assessed",
+      "mechanical_status": "needs_review",
+      "review_findings": [
+        {
+          "rule": "estimated_over_budget",
+          "message": "概算の上限が持ち時間を超える。音読または生成音声で確認する。"
+        }
+      ],
+      "timing": {
+        "counted_letters_and_numbers": 545,
+        "explicit_pause_seconds": 5,
+        "pace_cpm": {
+          "slow": 240,
+          "fast": 360
+        },
+        "estimated_seconds": [
+          95.83,
+          141.25
+        ],
+        "target_seconds": 120,
+        "measured_audio_seconds": null,
+        "method": "engineering-estimate; not a validated Japanese speech-rate model"
+      },
+      "script_sha256": "460a0b6ff45e0e311bde35bf3d9f390152ea129736033da97798b8ac63c88cb8"
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "research-limits",
+      "configuration": "without_skill",
+      "time_seconds": null,
+      "tokens": null,
+      "generation_status": "completed",
+      "semantic_fidelity": "not_assessed",
+      "mechanical_status": "needs_review",
+      "review_findings": [
+        {
+          "rule": "number_not_in_sources",
+          "segment_id": "results",
+          "excerpt": "2",
+          "message": "資料にない数値の候補。言い換えや計算も含め意味を確認する。"
+        },
+        {
+          "rule": "number_not_in_sources",
+          "segment_id": "discussion",
+          "excerpt": "2",
+          "message": "資料にない数値の候補。言い換えや計算も含め意味を確認する。"
+        },
+        {
+          "rule": "estimated_over_budget",
+          "message": "概算の上限が持ち時間を超える。音読または生成音声で確認する。"
+        }
+      ],
+      "timing": {
+        "counted_letters_and_numbers": 479,
+        "explicit_pause_seconds": 8,
+        "pace_cpm": {
+          "slow": 240,
+          "fast": 360
+        },
+        "estimated_seconds": [
+          87.83,
+          127.75
+        ],
+        "target_seconds": 120,
+        "measured_audio_seconds": null,
+        "method": "engineering-estimate; not a validated Japanese speech-rate model"
+      },
+      "script_sha256": "84730e08314491904835c5b64beb2da9caa69ab69a495cf43748b504d552ca8d"
+    }
+  ],
+  "missing_or_invalid": 0,
+  "quality_score": null,
+  "human_listening": "not_assessed",
+  "notice": "Mechanical findings are review candidates, not quality scores. Missing runs remain visible."
+}

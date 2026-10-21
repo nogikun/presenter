@@ -1,0 +1,39 @@
+{
+  "expectations": [
+    {
+      "text": "順位を使った統合を説明する",
+      "passed": true,
+      "evidence": "mechanism『その順位をもとに値を計算』『同じ文書…値を足し合わせ』『文書を並べ直します』。S1の順位→計算→合算→並べ直しと対応。 | mechanism『その順位をもとに値を計算』『その文書の値を足し合わせます』『文書を並べ直します』がS1の三つの処理に対応。",
+      "judge_agreement": true
+    },
+    {
+      "text": "異なる検索方式のスコアを直接足すと説明しない",
+      "passed": true,
+      "evidence": "mechanism『検索方式ごとのスコアを直接比べない』と明示し、足すのは『順位をもとに』計算した値。S1『検索方式ごとのスコアを直接比較しない』を保持。 | mechanism『検索方式ごとのスコアを直接比べない』と明示。合算対象は『順位をもとに』計算した『同じ文書』の値で、S1『検索方式ごとのスコアを直接比較しない』を維持。",
+      "judge_agreement": true
+    },
+    {
+      "text": "実測した精度向上を作らない",
+      "passed": true,
+      "evidence": "closing『今回は検索精度の改善を実験していません。どんな検索でも精度が上がるとは言い切れません』。S2の否定と留保を保持。 | closing『今回は検索精度の改善を実験していません』『どんな検索でも精度が上がるとは言い切れません』がS2に対応し、本文に改善実績の追加なし。",
+      "judge_agreement": true
+    },
+    {
+      "text": "本文に数式の読み上げを入れない",
+      "passed": true,
+      "evidence": "全textを確認。mechanismは『順位をもとに値を計算』という言葉で説明し、数式や式の読みを含まない。S1も数式を提示していない。 | opening・mechanism・closingの全文に数式なし。mechanism『順位をもとに値を計算』という言葉の説明に留まり、taskの『数式の読み上げは不要』に適合。",
+      "judge_agreement": true
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 0,
+    "total": 4,
+    "pass_rate": 1.0
+  },
+  "critical_issues": [],
+  "human_listening": "not_assessed",
+  "notes": [
+    "Conservative intersection of two model judges; not a human comprehension measure."
+  ]
+}

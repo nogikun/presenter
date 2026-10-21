@@ -1,0 +1,26 @@
+{
+  "status": "not_run",
+  "note": "Trigger fixtures only. Description selection accuracy has not been measured.",
+  "queries": [
+    {"query": "この調査メモから、日本語で一分の技術紹介を話せる原稿を作って。相手は検索の仕組みを知らない同僚です。", "should_trigger": true},
+    {"query": "上司に試験導入の許可を取りたい。検証結果の条件と未確認の費用を残し、九十秒の発表台本にして。", "should_trigger": true},
+    {"query": "スライドごとの話す内容と、次へ切り替えるつなぎの言葉を日本語で書いてください。", "should_trigger": true},
+    {"query": "研究発表の読み原稿を二分にしたい。有意差は調べていないので、その限界は消さないで。", "should_trigger": true},
+    {"query": "この原稿、読むと分かるけど聞くと難しい。専門用語の説明と文の切り方を直して。", "should_trigger": true},
+    {"query": "TTSで読む製品紹介の台本を用意したい。日本語の本文と間の指示を分けてください。", "should_trigger": true},
+    {"query": "明日の朝会で進捗を三十秒で報告したい。完了と予定が混ざらない原稿にして。", "should_trigger": true},
+    {"query": "プレゼンで聞き手に何を判断してもらうかを整理して、構成から発表原稿まで作ってほしい。", "should_trigger": true},
+    {"query": "この日本語の発表原稿を、数値や否定を変えずに自然な口語調へ改稿して。", "should_trigger": true},
+    {"query": "セミナーで話す説明を作りたい。持ち時間五分で、図を見る間も含めて原稿を点検してください。", "should_trigger": true},
+    {"query": "プレゼン資料の背景色とフォントだけ変更して。原稿は不要です。", "should_trigger": false},
+    {"query": "会議の録音を日本語で文字起こしして、話者を分けたい。", "should_trigger": false},
+    {"query": "取引先に送る日程確認のメールを自然な日本語へ直して。", "should_trigger": false},
+    {"query": "この技術記事をブログに載せるので、書き言葉のまま推敲して。", "should_trigger": false},
+    {"query": "発表で使うマイクが認識されません。Windowsの設定を確認したい。", "should_trigger": false},
+    {"query": "既に完成した原稿をFish Audioで音声生成するコマンドだけ教えて。文章は変えないで。", "should_trigger": false},
+    {"query": "このSSMLのXML構文エラーを直してください。原稿の編集はしなくていいです。", "should_trigger": false},
+    {"query": "プレゼンの効果を測るアンケート結果を集計してグラフにして。原稿は作りません。", "should_trigger": false},
+    {"query": "英語のスピーチ原稿をネイティブ向けに校正して。日本語への翻訳は不要です。", "should_trigger": false},
+    {"query": "日本語プレゼンのフレームワークを調査して一覧にしてください。今回は原稿は作らないで。", "should_trigger": false}
+  ]
+}

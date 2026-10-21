@@ -1,0 +1,17 @@
+{
+  "seed": 1729,
+  "mapping": {
+    "novice-rrf": {
+      "A": "without_skill",
+      "B": "with_skill"
+    },
+    "proposal-conditions": {
+      "A": "with_skill",
+      "B": "without_skill"
+    },
+    "research-limits": {
+      "A": "with_skill",
+      "B": "without_skill"
+    }
+  }
+}

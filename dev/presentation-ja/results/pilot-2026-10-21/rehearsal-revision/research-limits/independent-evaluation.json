@@ -1,0 +1,45 @@
+{
+  "evaluator_kind": "independent-model",
+  "model": "unknown",
+  "scope": "単一原稿を入力資料と照合した独立評価。比較原稿・機械検査結果・生成条件は参照していない。最終原稿のclosing本文とevidenceを再確認し、その変更を評価に反映した。",
+  "critical_issues": [],
+  "dimensions": {
+    "fidelity": {
+      "score": 5,
+      "evidence": "method『同じ書体の印刷文字を使った、一種類の合成資料』『その中の100文字』、results『設定Aは92文字、設定Bは94文字』が、S1『合成資料の印刷文字100文字』『設定Aは92文字、設定Bは94文字』とS2『資料は同じ書体の一種類だけ』に一致する。discussion_limits『統計的な有意差は確認していません』『手書きや数式は試していないため、その性能は判断できません』は、S2『繰り返し測定と統計的な検定はしていない』『手書きや数式は試していない』の範囲を守る。closingもS3『ほかの資料でも優れるかは分からない』を保持する。",
+      "suggestion": "必須の修正なし。数値、条件、留保を維持する。"
+    },
+    "audience_fit": {
+      "score": 4,
+      "evidence": "opening『OCRは、オーシーアールと読み、画像中の文字をテキストにする処理です』が、S1『OCRは画像中の文字をテキストにする処理』を初出で説明している。一方、method『合成資料』とdiscussion_limits『統計的な有意差』には平易な補足がない。S1『合成資料』、S2『統計的な検定はしていない』が対応する資料で、OCR非専門の初学者には用語の意味が残る可能性がある。",
+      "suggestion": "『統計的な有意差は確認していません』に、『この差が偶然ではないとは、まだ言えません』という意味の補足を添える。新たな実験結果として断定しない。"
+    },
+    "structure": {
+      "score": 5,
+      "evidence": "opening『正しく認識する文字の数がどう違うか』から、method『100文字で、設定Aと設定Bを比較』、results『今回の資料では、設定Bの認識数が多かった』、discussion_limits『ほかの資料でも設定Bが優れるかは分かりません』、closing『別の書体や撮影条件でも比較したい』へつながる。S1の比較方法と数値、S2の検証範囲、S3の結論と次の比較に対応し、結果と考察が明示的に区切られている。",
+      "suggestion": "必須の修正なし。結果から限界への切り替えを維持する。"
+    },
+    "spoken_japanese": {
+      "score": 5,
+      "evidence": "テキストによる予測評価。results『設定Aは92文字、設定Bは94文字を正しく認識しました』はS1の数値と対象を一文で追える。最終原稿のclosingは『今回観測した認識数の違いを、ほかの資料にも通用する結論に広げることはできません。今後も検証を続けたいと思います』と二文に分かれ、一般化できない範囲と今後の行動を順に追える。S3『ほかの資料でも優れるかは分からない』『次に別の書体と撮影条件で比較したい』の意味を保ち、対応するevidenceも修正後の主張を支えている。",
+      "suggestion": "必須の修正なし。closingの二文の間を明確に区切って読む。"
+    },
+    "pacing": {
+      "score": 4,
+      "evidence": "テキストによる予測評価。resultsの後に2秒、opening・method・discussion_limitsの後に各1秒の間が指定され、数値結果と留保を区切る計画がある。discussion_limits『資料は一種類だけ』『繰り返し測定や統計的な検定はしておらず』『手書きや数式は試していない』は、S2の三つの制約をまとめて扱うため、ここを速く読むと今回の目標である『まだ言えないこと』が残りにくい。120秒への実際の収まりは未確認。",
+      "suggestion": "discussion_limitsの各制約の間にも短い間を置いて音読し、全体が120秒に収まるか実測する。"
+    },
+    "delivery_readiness": {
+      "score": 5,
+      "evidence": "opening本文に『オーシーアールと読み』があり、専門略語の読みが確定している。results『結果です』、discussion_limits『ここからは、考察と限界です』により、S1の観測結果とS2・S3の限界の切り替えが聞き手にも分かる。pause_after_secondsとevidenceは本文から分離されており、そのまま読む内容と段取りを区別できる。",
+      "suggestion": "必須の原稿修正なし。発表時には本文だけを読み、間の指定を実行する。"
+    }
+  },
+  "audio": "not_assessed",
+  "audio_synthesis": "not_assessed",
+  "human_listening": "not_assessed",
+  "comprehension_testing": "not_assessed",
+  "measured_duration": "not_assessed",
+  "held_out_evaluation": "not_assessed",
+  "assessment_limitations": "spoken_japaneseとpacingはテキストからの予測であり、音声の自然さ、実際の話速、聴取理解を実測していない。一般的な手法の優位性は評価していない。"
+}

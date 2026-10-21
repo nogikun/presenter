@@ -1,0 +1,33 @@
+{
+  "agreements": [
+    {
+      "case": "novice-rrf",
+      "order_judgments": [
+        "B",
+        "B"
+      ],
+      "agreement": true,
+      "resolved_preference": "with_skill"
+    },
+    {
+      "case": "proposal-conditions",
+      "order_judgments": [
+        "B",
+        "B"
+      ],
+      "agreement": true,
+      "resolved_preference": "without_skill"
+    },
+    {
+      "case": "research-limits",
+      "order_judgments": [
+        "TIE",
+        "TIE"
+      ],
+      "agreement": true,
+      "resolved_preference": "tie"
+    }
+  ],
+  "human_listening": "not_assessed",
+  "quality_score": null
+}
