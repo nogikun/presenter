@@ -65,13 +65,14 @@ def say(backend, text, output):
             except AudioError as exc:
                 print(f"ERROR: {exc}", file=sys.stderr)
             continue
-        if line:
+        # One request per sentence: long requests run slower (RTF 1.65 vs ~1.5 measured).
+        # Each sentence gets its own server head start, so pauses fall between sentences,
+        # never inside one. An optional filler plays only if the first audio is late.
+        # Punctuation-only input ("！？") yields no sentences and is skipped.
+        sentences = segments(line, settings.get("split_first_clause", False),
+                             int(settings.get("max_chars", 40)))
+        if sentences:
             try:
-                # One request per sentence: long requests run slower (RTF 1.65 vs ~1.5 measured).
-                # Each sentence gets its own server head start, so pauses fall between sentences,
-                # never inside one. An optional filler plays only if the first audio is late.
-                sentences = segments(line, settings.get("split_first_clause", False),
-                                     int(settings.get("max_chars", 40)))
                 report = render([Speech(s, Style()) for s in sentences], backend, output, play=True,
                                 force=True, filler=fillers and fillers.choose(sentences[0]),
                                 filler_after=fillers.after if fillers else 0)

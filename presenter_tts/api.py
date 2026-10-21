@@ -68,7 +68,7 @@ def parse(body):
     if len(text) > MAX_INPUT:
         raise RequestError(f"'input' is longer than {MAX_INPUT} characters", "input")
     response_format = request.get("response_format", "mp3")
-    if response_format not in FORMATS:
+    if not isinstance(response_format, str) or response_format not in FORMATS:
         raise RequestError(f"'response_format' must be one of {', '.join(FORMATS)}", "response_format")
     speed = request.get("speed", 1.0)
     if isinstance(speed, bool) or not isinstance(speed, (int, float)) or not .25 <= speed <= 4:

@@ -401,6 +401,16 @@ class HTTPContractTests(unittest.TestCase):
                          ['代表作は「あいう」', '「えお」「かき」など。'])
         self.assertEqual(clauses('雑誌「言葉」を創刊した人物です。', 5), ['雑誌「言葉」を創刊した人物です。'])
 
+    def test_say_skips_punctuation_only_input(self):
+        from presenter_tts.say import say
+        backend = Backend({'say': {'filler': True}})
+        with patch('presenter_tts.say.render') as fake, \
+                patch('presenter_tts.fillers.filler_pool', return_value=[]), \
+                patch('builtins.input', side_effect=['！？', EOFError]):
+            self.assertEqual(say(backend, '！？', Path('x.wav')), 0)  # One-shot: returns
+            self.assertEqual(say(backend, '', Path('x.wav')), 0)      # Interactive: keeps going
+        fake.assert_not_called()
+
     def test_say_speaks_each_typed_line(self):
         from presenter_tts.say import say
         with patch('presenter_tts.say.render') as fake, \

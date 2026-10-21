@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import tempfile
 import wave
 
 from .audio import AudioError
@@ -72,7 +73,8 @@ def engine():
     env = dict(os.environ)
     cuda = RUNTIME / "s2-cuda-root.txt"
     if cuda.is_file():
-        root = Path(cuda.read_text(encoding="utf-8").strip())
+        # utf-8-sig: Windows PowerShell 5.1 writes a BOM, which strip() would leave in the path.
+        root = Path(cuda.read_text(encoding="utf-8-sig").strip())
         env["PATH"] = os.pathsep.join([str(root / "bin"), str(root / "bin" / "x64"), env["PATH"]])
     return executable, model, model.with_name("tokenizer.json"), env
 
@@ -95,38 +97,46 @@ def clone(name, audio, transcript, *, sample_text, sample_output, force=False, g
         raise AudioError("FFmpeg is required to read the reference audio")
     executable, model, tokenizer, env = engine()
     VOICES.mkdir(parents=True, exist_ok=True)
-    reference = VOICES / f"{name}.wav"
-    proc = subprocess.run([ffmpeg, "-v", "error", "-y", "-i", str(audio), "-ac", "1", "-ar", "44100",
-                           "-sample_fmt", "s16", str(reference)], capture_output=True, text=True,
-                          encoding="utf-8", errors="replace")
-    if proc.returncode:
-        raise AudioError(f"FFmpeg could not read {audio}: {proc.stderr.strip()[-300:]}")
-    gain_db = normalize(reference) if boost else 0.0
-    with wave.open(str(reference), "rb") as clip:
-        seconds = clip.getnframes() / clip.getframerate()
-    profile.unlink(missing_ok=True)
-    command = [str(executable), "--model", str(model), "--tokenizer", str(tokenizer),
-               "--prompt-audio", str(reference), "--prompt-text", transcript, "--voice", name,
-               "--save-voice", "--voice-dir", str(VOICES), "--text", sample_text,
-               "--output", str(sample_output)]
-    if gpu:
-        command += ["--cuda", "0", "--gpu-layers", "36", "--codec-follow-backend"]
-    Path(sample_output).parent.mkdir(parents=True, exist_ok=True)
-    proc = subprocess.run(command, capture_output=True, text=True, encoding="utf-8",
-                          errors="replace", env=env)
-    if proc.returncode or not profile.is_file():
-        tail = "\n".join((proc.stdout + proc.stderr).strip().splitlines()[-5:])
-        raise AudioError(f"s2.cpp could not save the voice:\n{tail}")
+    # Build everything in a staging folder and swap it in only after s2.cpp succeeded, so a failed
+    # `--force` re-clone (OOM, bad audio) leaves the existing voice untouched.
+    staging = Path(tempfile.mkdtemp(prefix=f".{name}-", dir=VOICES))
+    try:
+        reference = staging / f"{name}.wav"
+        proc = subprocess.run([ffmpeg, "-v", "error", "-y", "-i", str(audio), "-ac", "1",
+                               "-ar", "44100", "-sample_fmt", "s16", str(reference)],
+                              capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if proc.returncode:
+            raise AudioError(f"FFmpeg could not read {audio}: {proc.stderr.strip()[-300:]}")
+        gain_db = normalize(reference) if boost else 0.0
+        with wave.open(str(reference), "rb") as clip:
+            seconds = clip.getnframes() / clip.getframerate()
+        command = [str(executable), "--model", str(model), "--tokenizer", str(tokenizer),
+                   "--prompt-audio", str(reference), "--prompt-text", transcript, "--voice", name,
+                   "--save-voice", "--voice-dir", str(staging), "--text", sample_text,
+                   "--output", str(sample_output)]
+        if gpu:
+            command += ["--cuda", "0", "--gpu-layers", "36", "--codec-follow-backend"]
+        Path(sample_output).parent.mkdir(parents=True, exist_ok=True)
+        proc = subprocess.run(command, capture_output=True, text=True, encoding="utf-8",
+                              errors="replace", env=env)
+        if proc.returncode or not (staging / profile.name).is_file():
+            tail = "\n".join((proc.stdout + proc.stderr).strip().splitlines()[-5:])
+            raise AudioError(f"s2.cpp could not save the voice:\n{tail}")
+        meta = {"transcript": transcript, "source": str(audio), "seconds": round(seconds, 2),
+                "gain_db": round(gain_db, 1),
+                "created": datetime.now().isoformat(timespec="seconds")}
+        (staging / f"{name}.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n",
+                                              encoding="utf-8")
+        for suffix in (".wav", ".json", ".s2voice"):  # The profile last: it marks the voice usable.
+            os.replace(staging / f"{name}{suffix}", VOICES / f"{name}{suffix}")
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
     # Fillers are synthesized per voice; a replaced voice must not reuse the old ones.
     shutil.rmtree(FILLER_CACHE / name, ignore_errors=True)
     low, high = RECOMMENDED_SECONDS
     warnings = []
     if not low <= seconds <= high:
         warnings.append(f"Reference is {seconds:.1f} s; {low}-{high} s clones more reliably")
-    meta = {"transcript": transcript, "source": str(audio), "seconds": round(seconds, 2),
-            "gain_db": round(gain_db, 1), "created": datetime.now().isoformat(timespec="seconds")}
-    profile.with_suffix(".json").write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n",
-                                            encoding="utf-8")
     return {**meta, "warnings": warnings}
 
 

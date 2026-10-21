@@ -31,6 +31,7 @@ class ParseTests(unittest.TestCase):
         self.assertEqual(api.parse(b'{"input": "hi", "voice": "myvoice"}'), ('hi', 'myvoice', 'mp3', 1.0))
         for body, param in ((b'[]', None), (b'{}', 'input'), (b'{"input": " "}', 'input'),
                             (b'{"input": "hi", "response_format": "ogg"}', 'response_format'),
+                            (b'{"input": "hi", "response_format": []}', 'response_format'),
                             (b'{"input": "hi", "speed": 5}', 'speed'),
                             (b'{"input": "hi", "speed": true}', 'speed'),
                             (('{"input": "%s"}' % ('a' * 4097)).encode(), 'input')):

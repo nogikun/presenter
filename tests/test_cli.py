@@ -58,6 +58,39 @@ class VoiceCommandTests(unittest.TestCase):
         self.assertFalse((self.fillers / 'myvoice').exists())  # stale fillers are dropped
         self.assertIn('5-30 s', result.output)
 
+    def test_failed_force_reclone_keeps_the_old_voice(self):
+        source = self.folder / 'rec.wav'
+        write_wav(source, [1000] * 100)
+        for suffix in ('.s2voice', '.wav', '.json'):
+            (self.voices / f'myvoice{suffix}').write_bytes(b'old')
+
+        def fake_run(command, **kwargs):
+            if command[0] == 'ffmpeg':
+                write_wav(command[-1], [1000, -2000] * 22050)
+                return type('Done', (), {'returncode': 0, 'stdout': '', 'stderr': ''})()
+            return type('Done', (), {'returncode': 1, 'stdout': '', 'stderr': 'CUDA out of memory'})()
+        with patch('presenter_tts.voices.shutil.which', return_value='ffmpeg'), \
+                patch('presenter_tts.voices.engine', return_value=('s2', 'm', 't', {})), \
+                patch('presenter_tts.voices.subprocess.run', side_effect=fake_run):
+            result = self.invoke('voice', 'add', 'myvoice', str(source), '-t', 'x', '--force',
+                                 '--no-preview')
+        self.assertEqual(result.exit_code, 2)
+        self.assertIn('out of memory', result.output)
+        for suffix in ('.s2voice', '.wav', '.json'):
+            self.assertEqual((self.voices / f'myvoice{suffix}').read_bytes(), b'old')
+        self.assertEqual(sorted(p.name for p in self.voices.iterdir()),
+                         ['myvoice.json', 'myvoice.s2voice', 'myvoice.wav'])  # No staging left
+
+    def test_cuda_root_with_bom_still_reaches_path(self):
+        runtime = self.folder / 'runtime'
+        for path in ('s2-build/Release/s2.exe', 'models/s2-pro-q4_k_m.gguf', 'models/tokenizer.json'):
+            (runtime / path).parent.mkdir(parents=True, exist_ok=True)
+            (runtime / path).write_bytes(b'x')
+        (runtime / 's2-cuda-root.txt').write_bytes('\ufeffC:\\CUDA\\v12.9\r\n'.encode('utf-8'))
+        with patch.object(voices, 'RUNTIME', runtime):
+            env = voices.engine()[3]
+        self.assertTrue(env['PATH'].startswith('C:\\CUDA\\v12.9\\bin'))
+
     def test_add_refuses_bad_input(self):
         source = self.folder / 'rec.wav'
         write_wav(source, [0] * 10)

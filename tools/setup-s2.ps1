@@ -80,7 +80,8 @@ $buildDir = Join-Path $runtimeRoot 's2-build'
 if ($LASTEXITCODE -ne 0) { throw 'CMake configuration failed.' }
 & $cmake --build $buildDir --config Release --parallel 4
 if ($LASTEXITCODE -ne 0) { throw 's2.cpp build failed.' }
-$CudaRoot | Set-Content -Encoding utf8 (Join-Path $runtimeRoot 's2-cuda-root.txt')
+# No BOM: Set-Content -Encoding utf8 adds one on Windows PowerShell 5.1.
+[IO.File]::WriteAllText((Join-Path $runtimeRoot 's2-cuda-root.txt'), $CudaRoot)
 & $PythonExecutable (Join-Path $PSScriptRoot 'fetch_s2.py') --directory (Join-Path $runtimeRoot 'models')
 if ($LASTEXITCODE -ne 0) { throw 'Model download failed; the compiled engine was preserved.' }
 & git -C $SourceDir rev-parse HEAD | Set-Content -Encoding ascii (Join-Path $runtimeRoot 's2-source-revision.txt')

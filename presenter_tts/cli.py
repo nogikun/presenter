@@ -46,7 +46,7 @@ def handled(command):
 def load_config(ctx, voice=None):
     path = ctx.obj
     if path.exists():
-        config = tomllib.loads(path.read_text(encoding="utf-8"))
+        config = tomllib.loads(path.read_text(encoding="utf-8-sig"))  # Tolerate an editor's BOM.
     elif path == Path("presenter.local.toml"):
         config = {"backend": "s2cpp"}
     else:
