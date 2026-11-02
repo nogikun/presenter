@@ -167,7 +167,7 @@ with client.audio.speech.with_streaming_response.create(
 uv run --project "<presenter>/tools" presenter-tts doctor
 ```
 
-OS、CPUアーキテクチャ、CUDA/Metal、FFmpeg/FFplay、ネットワーク、サーバーのポートをまとめて確認する。
+OS、CPUアーキテクチャ、CUDA/Metal、FFmpeg/FFplay（Macは再生用の`swiftc`も）、ネットワーク、サーバーのポートをまとめて確認する。
 
 | 症状 | 確認すること |
 |---|---|

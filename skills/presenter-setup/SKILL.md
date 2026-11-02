@@ -35,6 +35,7 @@ uv自体がない場合はこのコマンドが動かないので、先に手順
 | Macの`prerequisites.metal` | `xcrun --find metal`で見つかる |
 | `prerequisites.git`、`prerequisites.uv` | パスがある |
 | `ffmpeg`、`ffplay` | パスがある |
+| Macの`swiftc` | パスがある（再生用の補助プログラムをビルドする。なければ再生はFFplayを使う） |
 | `huggingface.co`、`github.com` | `DNS available` |
 
 WindowsでGPUがない、またはVRAMが足りない場合は、セットアップを進めずにその旨を伝える（CPUだけでは実用的な速度にならない）。MacはApple SiliconとMetalが必要。

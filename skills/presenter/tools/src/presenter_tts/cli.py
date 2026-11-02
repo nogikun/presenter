@@ -99,6 +99,8 @@ def doctor(ctx: typer.Context):
         profile = {"platform": sys.platform, "accelerator": None}
     result = {"python": sys.version.split()[0], "ffmpeg": shutil.which("ffmpeg"),
               "ffplay": shutil.which("ffplay"), "backend": config.get("backend", "s2cpp")}
+    if sys.platform == "darwin":
+        result["swiftc"] = shutil.which("swiftc")  # --play/say use a Core Audio helper built with it
     try:
         engine_ok, engine_note = bool(voices.engine()), None
     except AudioError as exc:
@@ -373,7 +375,9 @@ def voice_add(
     typer.echo(f"Saved voice '{name}': {meta['seconds']} s reference, gain {meta['gain_db']:+} dB")
     typer.echo(f"Check sentence: {sample_output}")
     typer.echo(f"Use it with: python -m presenter_tts say --voice {name}")
-    if preview and shutil.which("ffplay"):
+    if preview and sys.platform == "darwin" and shutil.which("afplay"):
+        subprocess.run([shutil.which("afplay"), str(sample_output)])
+    elif preview and shutil.which("ffplay"):
         subprocess.run([shutil.which("ffplay"), "-loglevel", "error", "-nodisp", "-autoexit",
                         str(sample_output)])
 

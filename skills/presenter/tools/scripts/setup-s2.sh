@@ -66,4 +66,7 @@ build_dir="$runtime_root/s2-build"
 
 "$python_executable" "$script_dir/fetch_s2.py" --directory "$runtime_root/models"
 git -C "$source_dir" rev-parse HEAD > "$runtime_root/s2-source-revision.txt"
+# Build the Core Audio playback helper now, so the first `say` does not wait for swiftc.
+"$python_executable" -c 'from presenter_tts.audio import mac_pcm_player; mac_pcm_player()' \
+    || printf 'Warning: the macOS playback helper did not build; --play will use ffplay.\n' >&2
 printf 'Setup finished. Run: uv run presenter-tts server start\n'

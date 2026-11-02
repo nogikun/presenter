@@ -1,25 +1,7 @@
+// Play s16le PCM from stdin as it arrives (presenter's --play on macOS), then exit when it is heard.
+// Usage: macos_pcm_player SAMPLE_RATE CHANNELS
 import AVFoundation
-import Darwin
 import Foundation
-
-final class BufferRetainer: @unchecked Sendable {
-    private let lock = NSLock()
-    private var buffers: [ObjectIdentifier: AVAudioPCMBuffer] = [:]
-
-    func hold(_ buffer: AVAudioPCMBuffer) -> ObjectIdentifier {
-        let id = ObjectIdentifier(buffer)
-        lock.lock()
-        buffers[id] = buffer
-        lock.unlock()
-        return id
-    }
-
-    func release(_ id: ObjectIdentifier) {
-        lock.lock()
-        buffers.removeValue(forKey: id)
-        lock.unlock()
-    }
-}
 
 func fail(_ message: String) -> Never {
     FileHandle.standardError.write(Data((message + "\n").utf8))
@@ -41,8 +23,6 @@ let engine = AVAudioEngine()
 let player = AVAudioPlayerNode()
 engine.attach(player)
 engine.connect(player, to: engine.mainMixerNode, format: format)
-player.volume = 1
-
 do {
     try engine.start()
 } catch {
@@ -51,68 +31,45 @@ do {
 player.play()
 
 let frameBytes = Int(channelCount) * MemoryLayout<Int16>.size
-let framesPerBuffer = 1024
-let bytesPerBuffer = frameBytes * framesPerBuffer
-var remainder = Data()
-var lastBuffer: AVAudioPCMBuffer?
-let retainer = BufferRetainer()
 
-func schedule(_ buffer: AVAudioPCMBuffer, finished: DispatchSemaphore? = nil) {
-    let id = retainer.hold(buffer)
-    player.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { _ in
-        retainer.release(id)
-        finished?.signal()
+// The player node keeps each scheduled buffer until it has played.
+func buffer(_ bytes: Data) -> AVAudioPCMBuffer {
+    let frames = AVAudioFrameCount(bytes.count / frameBytes)
+    guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: max(frames, 1)) else {
+        fail("Could not allocate a PCM buffer")
     }
-}
-
-func makeBuffer(_ bytes: Data) -> AVAudioPCMBuffer {
-    let frames = bytes.count / frameBytes
-    let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(frames))!
-    buffer.frameLength = AVAudioFrameCount(frames)
-    let audioBuffers = UnsafeMutableAudioBufferListPointer(buffer.mutableAudioBufferList)
-    guard audioBuffers.count == 1, let destination = audioBuffers[0].mData else {
-        fail("Could not allocate an interleaved PCM buffer")
-    }
+    buffer.frameLength = frames
     bytes.withUnsafeBytes { source in
-        _ = memcpy(destination, source.baseAddress!, bytes.count)
+        if let base = source.baseAddress {
+            memcpy(buffer.mutableAudioBufferList.pointee.mBuffers.mData, base, bytes.count)
+        }
     }
-    audioBuffers[0].mDataByteSize = UInt32(bytes.count)
     return buffer
 }
 
-do {
-    while let chunk = try FileHandle.standardInput.read(upToCount: bytesPerBuffer), !chunk.isEmpty {
-        remainder.append(chunk)
-        while remainder.count >= bytesPerBuffer {
-            let data = Data(remainder.prefix(bytesPerBuffer))
-            remainder.removeFirst(bytesPerBuffer)
-            if let previous = lastBuffer {
-                schedule(previous)
-            }
-            lastBuffer = makeBuffer(data)
-        }
+// Schedule whatever arrived at once: holding bytes back until more come would delay the end of a
+// sentence until the next one is generated. Only a partial sample frame waits.
+var pending = Data()
+while true {
+    let chunk = FileHandle.standardInput.availableData  // Blocks for data; empty at EOF.
+    if chunk.isEmpty {
+        break
     }
-} catch {
-    fail("Could not read PCM input: \(error)")
+    pending.append(chunk)
+    let usable = pending.count - pending.count % frameBytes
+    if usable > 0 {
+        player.scheduleBuffer(buffer(pending.prefix(usable)))
+        pending = Data(pending.dropFirst(usable))
+    }
 }
-
-if remainder.count % frameBytes != 0 {
+if !pending.isEmpty {
     fail("PCM input ended in the middle of a sample frame")
 }
-if !remainder.isEmpty {
-    if let previous = lastBuffer {
-        schedule(previous)
-    }
-    lastBuffer = makeBuffer(remainder)
-}
 
-if let lastBuffer {
-    let finished = DispatchSemaphore(value: 0)
-    schedule(lastBuffer, finished: finished)
-    if finished.wait(timeout: .now() + 300) == .timedOut {
-        fail("Timed out waiting for audio playback to finish")
-    }
-}
-
+// Buffers play in order, so a last (silent, 1-frame) buffer finishing means everything was heard.
+let finished = DispatchSemaphore(value: 0)
+let end = buffer(Data(count: frameBytes))
+player.scheduleBuffer(end, completionCallbackType: .dataPlayedBack) { _ in finished.signal() }
+finished.wait()
 player.stop()
 engine.stop()

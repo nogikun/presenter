@@ -2,7 +2,7 @@
 
 Python（uvで管理）でSSMLや入力文を解析し、量子化したFish Audio S2 Proを動かすs2.cppのHTTPサーバーへ渡す。
 話速・音量・ピッチはFFmpegで処理し、受信したPCMからWAVとマーカー時刻のJSONを作る。
-`--play`を付けるとFFplayへ受信中のPCMを送り、全文の音声完成を待たずに再生する。
+`--play`を付けると受信中のPCMを再生プログラムへ送り、全文の音声完成を待たずに再生する。WindowsはFFplay、MacはCore Audioの補助プログラム（`tools/scripts/macos_pcm_player.swift`。セットアップか初回の再生で`<home>/cache/`へビルドする）を使い、Swiftがなければ FFplayを使う。
 Python側にPyTorchやモデルを読み込まないため、TTSサーバーと同じGPUメモリを二重に消費しない。
 
 ## 現在の検証状況

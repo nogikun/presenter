@@ -289,6 +289,53 @@ class WireTests(unittest.TestCase):
         self.assertEqual(json.loads(self.requests[-1][2])['prePhonemeLength'], 0)
 
 
+class MacPlaybackTests(unittest.TestCase):
+    def play(self, mac_player):
+        from unittest.mock import MagicMock
+        popen = MagicMock()
+        popen.return_value.wait.return_value = 0
+        with tempfile.TemporaryDirectory() as folder, \
+                patch('presenter_tts.audio.sys.platform', 'darwin'), \
+                patch('presenter_tts.audio.mac_pcm_player', **mac_player), \
+                patch('presenter_tts.audio.shutil.which', return_value='/bin/ffplay'), \
+                patch('presenter_tts.audio.subprocess.Popen', popen):
+            render([Speech('a', Style())], StubBackend(), Path(folder) / 'out.wav', play=True)
+        return popen.call_args.args[0], popen.return_value.stdin
+
+    def test_streams_to_the_core_audio_helper_and_flushes_each_write(self):
+        command, stdin = self.play({'return_value': '/cache/player'})
+        self.assertEqual(command, ['/cache/player', '16000', '1'])
+        self.assertEqual(b''.join(c.args[0] for c in stdin.write.call_args_list), b'\x01' + b'\x00' * 3199)
+        stdin.flush.assert_called()
+
+    def test_falls_back_to_ffplay_when_the_helper_cannot_be_built(self):
+        command, _ = self.play({'side_effect': AudioError('no build')})
+        self.assertEqual(command[0], '/bin/ffplay')
+
+    def test_helper_is_built_once_per_source_content(self):
+        from presenter_tts import audio
+        built = []
+
+        def swiftc(command, **kwargs):
+            built.append(command)
+            Path(command[-1]).write_bytes(b'bin')
+            return type('Done', (), {'returncode': 0, 'stderr': ''})()
+
+        with tempfile.TemporaryDirectory() as folder, \
+                patch('presenter_tts.voices.RUNTIME', Path(folder)), \
+                patch('presenter_tts.audio.shutil.which', return_value='/usr/bin/swiftc'), \
+                patch('presenter_tts.audio.subprocess.run', side_effect=swiftc):
+            first = audio.mac_pcm_player()
+            self.assertEqual(audio.mac_pcm_player(), first)
+            self.assertRegex(Path(first).name, r'^macos-pcm-player-[0-9a-f]{12}$')
+        self.assertEqual(len(built), 1)
+
+    def test_no_swift_means_no_helper(self):
+        from presenter_tts import audio
+        with patch('presenter_tts.audio.shutil.which', return_value=None):
+            self.assertIsNone(audio.mac_pcm_player())
+
+
 class HTTPContractTests(unittest.TestCase):
     def test_s2_request_contract_without_network(self):
         response = io.BytesIO(b'\1\0' * 160)

@@ -2,6 +2,7 @@
 
 from contextlib import contextmanager
 from dataclasses import dataclass
+import hashlib
 import io
 import json
 import os
@@ -225,16 +226,18 @@ def transform(chunks, fmt, style):
             thread.join(timeout=1)
 
 
-def _mac_pcm_player():
-    """Build the Core Audio streaming helper once, outside the project checkout."""
+def mac_pcm_player():
+    """The Core Audio streaming helper for macOS playback, built once into <home>/cache, or None
+    without Swift (Xcode Command Line Tools); callers then fall back to ffplay."""
     from .voices import RUNTIME
 
     source = Path(__file__).resolve().parents[2] / "scripts" / "macos_pcm_player.swift"
     swiftc = shutil.which("swiftc")
-    if not swiftc:
-        raise AudioError("macOS playback requires Swift from Xcode Command Line Tools")
-    executable = RUNTIME / "macos-pcm-player"
-    if not executable.is_file() or executable.stat().st_mtime_ns < source.stat().st_mtime_ns:
+    if not swiftc or not source.is_file():
+        return None
+    # Named by content: a skill update copied with old timestamps must not reuse a stale build.
+    executable = RUNTIME / f"macos-pcm-player-{hashlib.sha256(source.read_bytes()).hexdigest()[:12]}"
+    if not executable.is_file():
         RUNTIME.mkdir(parents=True, exist_ok=True)
         temporary = executable.with_name(f".{executable.name}-{os.getpid()}")
         result = subprocess.run([swiftc, "-O", "-suppress-warnings", str(source), "-o",
@@ -253,10 +256,16 @@ def render(events, backend, output, *, play=False, force=False, filler=None, fil
     metadata = output.with_suffix(".json")
     if not force and (output.exists() or metadata.exists()):
         raise AudioError("Output exists; choose another filename or use --force")
-    mac_player = play and sys.platform == "darwin"
-    play_command = _mac_pcm_player() if mac_player else shutil.which("ffplay") if play else None
-    if play and not play_command:
-        raise AudioError("--play requires ffplay")
+    mac_player = None
+    if play and sys.platform == "darwin":
+        try:
+            mac_player = mac_pcm_player()
+        except AudioError:
+            if not shutil.which("ffplay"):
+                raise
+    if play and not mac_player and not shutil.which("ffplay"):
+        raise AudioError("--play requires ffplay" +
+                         (" or Swift (Xcode Command Line Tools)" if sys.platform == "darwin" else ""))
     if any(isinstance(e, Speech) and filters(e.style, Format(44100)) for e in events):
         if not shutil.which("ffmpeg"):
             raise AudioError("FFmpeg is required for SSML prosody and emphasis")
@@ -302,10 +311,10 @@ def render(events, backend, output, *, play=False, force=False, filler=None, fil
         wav.setparams((fmt.channels, 2, fmt.rate, 0, "NONE", "not compressed"))
         if play:
             if mac_player:
-                player = subprocess.Popen([play_command, str(fmt.rate), str(fmt.channels)],
+                player = subprocess.Popen([mac_player, str(fmt.rate), str(fmt.channels)],
                                           stdin=subprocess.PIPE)
             else:
-                player = subprocess.Popen([play_command, "-loglevel", "error",
+                player = subprocess.Popen([shutil.which("ffplay"), "-loglevel", "error",
                     "-nodisp", "-autoexit", "-f", "s16le", "-ar", str(fmt.rate),
                     "-ch_layout", "mono" if fmt.channels == 1 else "stereo",
                     "-i", "pipe:0"], stdin=subprocess.PIPE)
@@ -378,7 +387,11 @@ def render(events, backend, output, *, play=False, force=False, filler=None, fil
         report["playback_enabled"] = play
         if player:
             player.stdin.close()
-            if player.wait(timeout=120):
+            try:
+                failed = player.wait(timeout=120)
+            except subprocess.TimeoutExpired:
+                raise AudioError("Playback did not finish within 120 s of the last audio") from None
+            if failed:
                 raise AudioError("macOS audio player failed" if mac_player else "ffplay failed")
         os.replace(temporary, output)
         metadata.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
