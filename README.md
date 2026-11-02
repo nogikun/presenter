@@ -43,7 +43,7 @@ npx skills add nogikun/presenter
 
 1. 「presenterをセットアップして」 → presenter-setupがOSを判定し、WindowsはCUDA、MacはMetalでエンジンをビルドします（初回は約30分）
 2. 「html-deckでスライドを作って、presentation-jaで原稿も作って」
-3. 「そのスライドに私の声でナレーションを付けて」 → presenterが音声とプレーヤーを作ります（RTX 3080実測で発表の長さの約1.4倍。Macは未計測）
+3. 「そのスライドに私の声でナレーションを付けて」 → presenterが音声とプレーヤーを作ります（実測で発表の長さのRTX 3080は約1.4倍、M5のMacBook Airは約7倍）
 4. 「MP4にも書き出して」 → `presentation.mp4`ができ、プレーヤーにも「MP4 を保存」が出ます
 
 できあがるもの（`<deck>/narration/`）:

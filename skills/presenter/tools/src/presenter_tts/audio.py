@@ -17,6 +17,7 @@ import urllib.request
 import uuid
 import wave
 
+from . import runtime
 from .ssml import Mark, Pause, Speech, Style
 
 
@@ -95,7 +96,8 @@ class Backend:
                 raise AudioError(f"Cannot reach {self.url}: {exc}") from exc
 
     @contextmanager
-    def synthesize(self, text):
+    def synthesize(self, text, live=True):
+        """live=False: nobody hears the PCM as it arrives (no playback), so it may come late."""
         if self.kind == "s2cpp":
             params = {"stream": True, "chunked": True, "output_format": "pcm_s16le",
                       "stream_decode_stride_frames": 4, "stream_holdback_frames": 8,
@@ -106,6 +108,12 @@ class Backend:
             if per_char is not None:
                 # With RTF > 1 the playback deficit grows with sentence length, so scale the head start.
                 params["stream_start_buffer_ms"] = round(float(per_char) * len(text))
+            if not live and runtime.codec_arg(self.config.get("server", {})) == "--codec-cpu":
+                # Each stride re-decodes the clip so far, which on a CPU codec (Metal) doubled the
+                # time on an M5. Without playback, decode about once per sentence; 256 frames
+                # (~12 s of audio) still sends PCM well within the read timeout. A GPU codec
+                # (CUDA's default) keeps its measured settings.
+                params["stream_decode_stride_frames"] = max(256, int(params["stream_decode_stride_frames"]))
             # These values are a wire contract, not user-selectable generation options.
             params.update(stream=True, chunked=True, output_format="pcm_s16le")
             fields = {"text": text, "params": json.dumps(params)}
@@ -292,7 +300,7 @@ def render(events, backend, output, *, play=False, force=False, filler=None, fil
                     non_speech(event)
                 continue
             segment_started = time.perf_counter()
-            with backend.synthesize(event.text) as (current, chunks):
+            with backend.synthesize(event.text, live=play) as (current, chunks):
                 if fmt is None:
                     start(current)
                     if filler:

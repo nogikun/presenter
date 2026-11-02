@@ -82,7 +82,7 @@ class SSMLTests(unittest.TestCase):
 
 class StubBackend:
     @contextmanager
-    def synthesize(self, text):
+    def synthesize(self, text, live=True):
         yield Format(16000), iter([b'\x01', b'\x00' * 3199])
 
 
@@ -107,7 +107,7 @@ class RenderTests(unittest.TestCase):
                 self.delay = delay
 
             @contextmanager
-            def synthesize(self, text):
+            def synthesize(self, text, live=True):
                 def chunks():
                     time.sleep(self.delay)
                     yield b'\x02\x00' * 1600
@@ -136,7 +136,7 @@ class RenderTests(unittest.TestCase):
     def test_error_does_not_replace_existing_output(self):
         class BrokenBackend:
             @contextmanager
-            def synthesize(self, text):
+            def synthesize(self, text, live=True):
                 def chunks():
                     yield b'\0\0'
                     raise AudioError('backend disconnected')
@@ -157,7 +157,7 @@ class RenderTests(unittest.TestCase):
     def test_empty_or_odd_audio_is_not_published(self):
         class EmptyBackend:
             @contextmanager
-            def synthesize(self, text):
+            def synthesize(self, text, live=True):
                 yield Format(16000), iter([b'\0'])
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'x.wav'
@@ -332,6 +332,20 @@ class HTTPContractTests(unittest.TestCase):
                     pass
         self.assertIn(b'"stream_start_buffer_ms": 300', post.call_args.args[1])
         self.assertNotIn(b'per_char', post.call_args.args[1])
+
+    def test_cpu_codec_decodes_once_unless_someone_listens(self):
+        def request(platform, live):
+            backend = Backend({'generation': {'stream_decode_stride_frames': 16}})
+            with patch('presenter_tts.runtime.sys.platform', platform), \
+                    patch.object(backend, 'post', side_effect=AudioError('stop')) as post:
+                with self.assertRaises(AudioError):
+                    with backend.synthesize('hello', live=live):
+                        pass
+            return post.call_args.args[1]
+        self.assertIn(b'"stream_decode_stride_frames": 256', request('darwin', False))
+        self.assertIn(b'"stream_decode_stride_frames": 16', request('darwin', True))
+        # CUDA's GPU codec keeps the measured streaming stride even for files.
+        self.assertIn(b'"stream_decode_stride_frames": 16', request('win32', False))
 
     def test_voice_switching(self):
         from presenter_tts.voices import set_voice

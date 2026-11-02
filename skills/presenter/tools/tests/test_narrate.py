@@ -26,7 +26,7 @@ class StubBackend:
         pass
 
     @contextmanager
-    def synthesize(self, text):
+    def synthesize(self, text, live=True):
         StubBackend.spoken.append(text)
         yield Format(16000), iter([b'\x01\x00' * 1600])
 
