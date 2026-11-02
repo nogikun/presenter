@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -224,13 +225,37 @@ def transform(chunks, fmt, style):
             thread.join(timeout=1)
 
 
+def _mac_pcm_player():
+    """Build the Core Audio streaming helper once, outside the project checkout."""
+    from .voices import RUNTIME
+
+    source = Path(__file__).resolve().parents[2] / "scripts" / "macos_pcm_player.swift"
+    swiftc = shutil.which("swiftc")
+    if not swiftc:
+        raise AudioError("macOS playback requires Swift from Xcode Command Line Tools")
+    executable = RUNTIME / "macos-pcm-player"
+    if not executable.is_file() or executable.stat().st_mtime_ns < source.stat().st_mtime_ns:
+        RUNTIME.mkdir(parents=True, exist_ok=True)
+        temporary = executable.with_name(f".{executable.name}-{os.getpid()}")
+        result = subprocess.run([swiftc, "-O", "-suppress-warnings", str(source), "-o",
+                                 str(temporary)], capture_output=True, text=True)
+        if result.returncode:
+            temporary.unlink(missing_ok=True)
+            detail = result.stderr.strip()
+            raise AudioError("Could not build macOS audio player" + (f": {detail}" if detail else ""))
+        os.replace(temporary, executable)
+    return str(executable)
+
+
 def render(events, backend, output, *, play=False, force=False, filler=None, filler_after=.5):
     """filler: optional (Format, PCM16) inserted only if no speech audio arrived filler_after s in."""
     output = Path(output)
     metadata = output.with_suffix(".json")
     if not force and (output.exists() or metadata.exists()):
         raise AudioError("Output exists; choose another filename or use --force")
-    if play and not shutil.which("ffplay"):
+    mac_player = play and sys.platform == "darwin"
+    play_command = _mac_pcm_player() if mac_player else shutil.which("ffplay") if play else None
+    if play and not play_command:
         raise AudioError("--play requires ffplay")
     if any(isinstance(e, Speech) and filters(e.style, Format(44100)) for e in events):
         if not shutil.which("ffmpeg"):
@@ -253,6 +278,8 @@ def render(events, backend, output, *, play=False, force=False, filler=None, fil
         wav.writeframesraw(data)
         if player:
             player.stdin.write(data)
+            if mac_player:
+                player.stdin.flush()
         frames += len(data) // fmt.frame_bytes
 
     def non_speech(event):
@@ -274,10 +301,14 @@ def render(events, backend, output, *, play=False, force=False, filler=None, fil
         wav = wave.open(temporary, "wb")
         wav.setparams((fmt.channels, 2, fmt.rate, 0, "NONE", "not compressed"))
         if play:
-            player = subprocess.Popen([shutil.which("ffplay"), "-loglevel", "error",
-                "-nodisp", "-autoexit", "-f", "s16le", "-ar", str(fmt.rate),
-                "-ch_layout", "mono" if fmt.channels == 1 else "stereo",
-                "-i", "pipe:0"], stdin=subprocess.PIPE)
+            if mac_player:
+                player = subprocess.Popen([play_command, str(fmt.rate), str(fmt.channels)],
+                                          stdin=subprocess.PIPE)
+            else:
+                player = subprocess.Popen([play_command, "-loglevel", "error",
+                    "-nodisp", "-autoexit", "-f", "s16le", "-ar", str(fmt.rate),
+                    "-ch_layout", "mono" if fmt.channels == 1 else "stereo",
+                    "-i", "pipe:0"], stdin=subprocess.PIPE)
         for queued in pending:
             non_speech(queued)
 
@@ -348,7 +379,7 @@ def render(events, backend, output, *, play=False, force=False, filler=None, fil
         if player:
             player.stdin.close()
             if player.wait(timeout=120):
-                raise AudioError("ffplay failed")
+                raise AudioError("macOS audio player failed" if mac_player else "ffplay failed")
         os.replace(temporary, output)
         metadata.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         return report
