@@ -1,5 +1,5 @@
-# Unit tests on a GPU-less Windows runner. s2.cpp, the model and HTTP are stubbed in the tests,
-# so no engine build or model download happens here; real synthesis is checked on a GPU machine.
+# Unit tests on GPU-less Windows and macOS runners. s2.cpp, the model and HTTP are stubbed;
+# real synthesis is checked separately on a GPU machine.
 name: test
 
 on:
@@ -11,7 +11,11 @@ permissions:
 
 jobs:
   test:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -21,7 +25,11 @@ jobs:
           cache-dependency-glob: skills/presenter/tools/uv.lock
       # Several tests skip without FFmpeg; install it so every test actually runs.
       - name: Install FFmpeg
+        if: runner.os == 'Windows'
         run: choco install ffmpeg --yes --no-progress
+      - name: Install FFmpeg
+        if: runner.os == 'macOS'
+        run: brew list ffmpeg >/dev/null 2>&1 || brew install ffmpeg
       # The presenter skill carries its own uv project, as installed by `npx skills add`.
       - name: Install dependencies from uv.lock
         working-directory: skills/presenter/tools
@@ -29,3 +37,9 @@ jobs:
       - name: Run tests
         working-directory: skills/presenter/tools
         run: uv run python -m unittest discover -s tests -v
+      - name: Check macOS Metal setup
+        if: runner.os == 'macOS'
+        working-directory: skills/presenter/tools
+        run: |
+          bash -n scripts/setup-s2.sh
+          scripts/setup-s2.sh --check-only

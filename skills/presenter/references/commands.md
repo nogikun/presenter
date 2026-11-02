@@ -1,6 +1,6 @@
 # presenter-tts のコマンド
 
-`<presenter>`はこのスキルのフォルダ、`<home>`は`%LOCALAPPDATA%\presenter-tts`（環境変数`PRESENTER_TTS_HOME`で変更可）。
+`<presenter>`はこのスキルのフォルダ。`<home>`はWindowsでは`%LOCALAPPDATA%\presenter-tts`、Macでは`~/.local/share/presenter-tts`（環境変数`PRESENTER_TTS_HOME`で変更可）。
 エンジンやモデルの準備は presenter-setup スキル（[エンジンの詳細](engine.md)）が行う。
 
 ## 0. 呼び方
@@ -21,7 +21,7 @@
 
 `say`と`speak`は、S2 ProのTTSサーバー（s2.cpp）に音声を作らせる。
 
-```powershell
+```console
 uv run --project "<presenter>/tools" presenter-tts server start
 uv run --project "<presenter>/tools" presenter-tts server status
 uv run --project "<presenter>/tools" presenter-tts server stop
@@ -29,14 +29,14 @@ uv run --project "<presenter>/tools" presenter-tts server stop
 
 - `start`はサーバーを裏で（別プロセスで）起動し、リクエストを受け付けられるまで待ってから戻る。ターミナルを閉じても動き続ける。
 - `say`と`speak`は、サーバーが止まっていれば自動で起動する。自動起動しない場合は設定の`[server] auto_start = false`。
-- 動いている間はGPUメモリを約4.6 GB使う。使い終わったら`stop`で止める。
+- 動いている間はGPUメモリ（Macではユニファイドメモリ）を約4.6 GB使う。使い終わったら`stop`で止める。
 - `stop`で止まるのは、このツールが起動したサーバーだけ。s2.cppを手動で起動した場合は、そのターミナルでCtrl+Cを押して止める。
 - GPUに載せる層の数やコーデックの置き場所は、設定の`[server]`（`gpu_layers`、`codec_gpu`）で変える。
 - 起動時の出力は`<home>/cache/s2-server.log`に残る。起動に失敗したときは、このログの末尾も表示する。
 
 ## 2. 話させる（say）
 
-```powershell
+```console
 uv run --project "<presenter>/tools" presenter-tts say
 ```
 
@@ -50,7 +50,7 @@ uv run --project "<presenter>/tools" presenter-tts say
 
 1回だけ話させる、声を指定する場合:
 
-```powershell
+```console
 uv run --project "<presenter>/tools" presenter-tts say こんにちは、テストです。
 uv run --project "<presenter>/tools" presenter-tts say --voice myvoice
 ```
@@ -61,7 +61,7 @@ uv run --project "<presenter>/tools" presenter-tts say --voice myvoice
 
 録音と、その録音で話している内容をそのまま書いた文字起こしから、声を作る。
 
-```powershell
+```console
 uv run --project "<presenter>/tools" presenter-tts voice add myvoice 録音.wav --text "録音で話している内容"
 uv run --project "<presenter>/tools" presenter-tts voice list
 uv run --project "<presenter>/tools" presenter-tts voice remove myvoice
@@ -87,7 +87,7 @@ uv run --project "<presenter>/tools" presenter-tts voice remove myvoice
 
 SSMLで書いた原稿をWAVにする。
 
-```powershell
+```console
 uv run --project "<presenter>/tools" presenter-tts plan "<presenter>/tools/examples/presentation.ssml"
 uv run --project "<presenter>/tools" presenter-tts speak "<presenter>/tools/examples/presentation.ssml" --force
 uv run --project "<presenter>/tools" presenter-tts speak "<presenter>/tools/examples/presentation.ssml" --voice myvoice --play --force
@@ -103,7 +103,7 @@ uv run --project "<presenter>/tools" presenter-tts speak "<presenter>/tools/exam
 OpenAIの音声合成API（`POST /v1/audio/speech`）と同じ形で使えるサーバーを立てる。
 OpenAIのSDKや、OpenAI互換のTTSに対応したアプリから、接続先を変えるだけで使える。
 
-```powershell
+```console
 uv run --project "<presenter>/tools" presenter-tts api --voice myvoice
 ```
 
@@ -115,7 +115,7 @@ Listening on 0.0.0.0: other devices use this PC's IP address.
 API key: ...
 ```
 
-- 既定では`0.0.0.0:8000`で待ち受け、同じネットワークのほかの機器（スマホ、別のPC）からも使える。ほかの機器からは`http://<このPCのIPアドレス>:8000/v1`へ接続する。初回にWindowsのファイアウォールの確認が出たら、プライベートネットワークを許可する。
+- 既定では`0.0.0.0:8000`で待ち受け、同じネットワークのほかの機器（スマホ、別のPC）からも使える。ほかの機器からは`http://<このPCのIPアドレス>:8000/v1`へ接続する。OSのファイアウォール確認が出たら、信頼できるプライベートネットワークだけを許可する。
 - ネットワークに公開すると、だれでもクローンした声で話させられてしまうため、APIキーが必須。キーは初回に作って`<home>/api-key.txt`に保存し、以降も同じものを使う。自分で決める場合は`--api-key`か環境変数`PRESENTER_TTS_API_KEY`。
 - このPCだけで使うなら`--host 127.0.0.1`。この場合はキーが不要になる。
 - `--port`で待ち受けるポートを変えられる。
@@ -139,6 +139,16 @@ $body = @{ model = "tts-1"; input = "こんにちは。"; voice = "myvoice" } | 
 Invoke-WebRequest http://localhost:8000/v1/audio/speech -Method Post -Headers @{ Authorization = "Bearer <APIキー>" } -ContentType "application/json; charset=utf-8" -Body ([Text.Encoding]::UTF8.GetBytes($body)) -OutFile hello.mp3
 ```
 
+Macのシェルから試す例:
+
+```bash
+curl http://localhost:8000/v1/audio/speech \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <APIキー>' \
+  -d '{"model":"tts-1","input":"こんにちは。","voice":"myvoice"}' \
+  --output hello.mp3
+```
+
 OpenAIのPython SDKから使う例:
 
 ```python
@@ -152,11 +162,11 @@ with client.audio.speech.with_streaming_response.create(
 
 ## 6. 調子が悪いとき（doctor）
 
-```powershell
+```console
 uv run --project "<presenter>/tools" presenter-tts doctor
 ```
 
-GPU、FFmpeg/FFplay、ネットワーク、サーバーのポートをまとめて確認する。
+OS、CPUアーキテクチャ、CUDA/Metal、FFmpeg/FFplay、ネットワーク、サーバーのポートをまとめて確認する。
 
 | 症状 | 確認すること |
 |---|---|
@@ -166,7 +176,7 @@ GPU、FFmpeg/FFplay、ネットワーク、サーバーのポートをまとめ�
 | 声が似ていない | 録音を長くする（10秒以上）、文字起こしが録音と合っているか確認 |
 | サーバーが起動しない | `<home>/cache/s2-server.log`の末尾。GPUメモリ不足なら`[server] gpu_layers`を下げる |
 | APIが`401`を返す | `Authorization: Bearer <APIキー>`。キーは`<home>/api-key.txt` |
-| ほかの機器からAPIにつながらない | Windowsのファイアウォールでpythonを許可しているか、IPアドレスが合っているか |
+| ほかの機器からAPIにつながらない | OSのファイアウォールでPythonを許可しているか、IPアドレスが合っているか |
 
 ## 7. 設定（<home>/config.toml）
 
@@ -175,8 +185,10 @@ GPU、FFmpeg/FFplay、ネットワーク、サーバーのポートをまとめ�
 | 先頭 | `voice` | 普段使う声の名前（`voice list`の名前）か`.s2voice`のパス |
 | `[generation]` | `stream_start_buffer_ms_per_char` | 話し始める前に、1文字あたりためる時間（途切れ対策） |
 | `[server]` | `auto_start` | `say`/`speak`でサーバーを自動起動するか（既定true） |
+| `[server]` | `accelerator` | `auto`ならWindowsでCUDA、MacでMetal。明示値は`cuda`、`metal`、`cpu` |
+| `[server]` | `gpu_device` | CUDAのデバイス番号（既定0。Metalでは使わない） |
 | `[server]` | `gpu_layers` | GPUに載せる層の数（既定36＝全部） |
-| `[server]` | `codec_gpu` | 音声コーデックもGPUで動かすか（既定true） |
+| `[server]` | `codec_gpu` | CUDAで音声コーデックもGPUへ載せるか（既定true）。Metalは未対応のPAD演算があるため常にCPU |
 | `[say]` | `filler` | フィラーを使うか |
 | `[say]` | `filler_after_ms` | 本文がこの時間までに届かなければフィラーを流す |
 | `[say]` | `filler_probability` | フィラーを流す確率 |
@@ -185,7 +197,7 @@ GPU、FFmpeg/FFplay、ネットワーク、サーバーのポートをまとめ�
 
 すべてのオプションは`--help`で確認できる。
 
-```powershell
+```console
 uv run --project "<presenter>/tools" presenter-tts --help
 uv run --project "<presenter>/tools" presenter-tts voice add --help
 ```

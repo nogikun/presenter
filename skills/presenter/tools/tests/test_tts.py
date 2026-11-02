@@ -187,8 +187,8 @@ class RenderTests(unittest.TestCase):
         errors = []
 
         def source():
-            # Half a second of PCM, then wait as a real TTS stream might.
-            yield b'\1\0' * 8000
+            # Exceed FFmpeg 8's atempo buffer, then wait as a real TTS stream might.
+            yield b'\1\0' * 64000
             if not release_input.wait(8):
                 raise RuntimeError('test input was not released')
             yield b'\1\0' * 8000

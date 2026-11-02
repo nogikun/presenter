@@ -7,7 +7,7 @@ Python側にPyTorchやモデルを読み込まないため、TTSサーバーと�
 
 ## 現在の検証状況
 
-2026-10-21時点、**GeForce RTX 3080（VRAM 10 GB）・CUDA 12.9・Q4_K_M**で確認した。
+2026-10-21時点、**GeForce RTX 3080（VRAM 10 GB）・CUDA 12.9・Q4_K_M**で音声生成を確認した。MacはM5・Metal 4でs2.cppのMetalビルドまで確認しており、モデルを使った速度と音質は未計測。
 
 - s2.cppをCUDA 12.9（SM86）でビルドし、全36層とコーデックをGPUに載せて動作。サーバーのVRAM使用は約4 GB。
 - 生成速度は1フレーム（約46 ms分の音声）あたり約49 msで、生成だけのRTFは約1.07。ストリーミング用の再デコードを含めるとRTFは約1.3〜1.4で、実時間より遅い。
@@ -23,7 +23,7 @@ Python側にPyTorchやモデルを読み込まないため、TTSサーバーと�
 
 `uv run --project`が初回に`<presenter>/tools/.venv`へ依存関係（Python 3.11、Typer）を入れる。`uv sync`や仮想環境の有効化は不要。
 
-```powershell
+```console
 uv run --project "<presenter>/tools" presenter-tts plan "<presenter>/tools/examples/presentation.ssml"
 uv run --project "<presenter>/tools" presenter-tts doctor
 uv run --project "<presenter>/tools" python -m unittest discover -s "<presenter>/tools/tests" -v
@@ -39,8 +39,9 @@ CUDA更新・WSL側の診断と設定方針は、presenter-setupスキルの`ref
 
 必要なもの:
 
-- Visual Studio 2022の「C++によるデスクトップ開発」とCMakeツール
-- CUDA Toolkit 12.4以上。`nvcc --version`で確認する。`nvidia-smi`に表示されるCUDAの値はドライバー側の対応値。
+- WindowsではVisual Studio 2022の「C++によるデスクトップ開発」とCMakeツール
+- WindowsではCUDA Toolkit 12.4以上。`nvcc --version`で確認する。`nvidia-smi`に表示されるCUDAの値はドライバー側の対応値。
+- MacではApple Silicon、Xcode Command Line Tools、Metal。CUDAやMPSGraphは使わず、ggmlのMetalバックエンドを使う。
 - Git、uv（Python 3.11はuvが用意する）、FFmpegとFFplay
 - モデル約3.6GB、トークナイザー約12MBに加え、ソースとビルド用のディスク空き容量
 - GitHubとHugging Faceへの通信
@@ -50,7 +51,14 @@ CUDA更新・WSL側の診断と設定方針は、presenter-setupスキルの`ref
 & "<presenter>/tools/scripts/setup-s2.ps1"
 ```
 
-セットアップは`<home>/cache/`内にs2.cppとggmlを取得し、RTX 3080のSM86向けにビルドする。
+Macでは次を使う。CMakeがPATHになければuvxで一時的に用意する。
+
+```bash
+"<presenter>/tools/scripts/setup-s2.sh" --check-only
+"<presenter>/tools/scripts/setup-s2.sh"
+```
+
+セットアップは`<home>/cache/`内にs2.cppとggmlを取得し、WindowsはCUDA、MacはMetal向けにビルドする。
 GGUFは`rodrigomt/s2-pro-gguf`の`Q4_K_M`を取得する。
 モデルの公開LFS SHA-256を照合し、ダウンロード途中のファイルは`.part`として扱う。
 利用したモデルのリビジョンとハッシュを`<home>/cache/models/provenance.json`、ソースのコミットを
@@ -62,13 +70,22 @@ GGUFは`rodrigomt/s2-pro-gguf`の`Q4_K_M`を取得する。
 TTSサーバーは`uv run --project "<presenter>/tools" presenter-tts server start`で裏で起動する（[使い方](commands.md#1-ttsサーバー)）。
 `say`・`speak`・`api`は、止まっていれば自動で起動する。出力は`<home>/cache/s2-server.log`に残る。
 
-既定はGPUに全36層、コーデックもGPU。VRAMが足りずに起動できないときは、
+既定はGPUに全36層。CUDAはコーデックもGPU、Metalは未対応のPAD演算があるためコーデックだけCPUで動かす。VRAMが足りずに起動できないときは、
 `<home>/config.toml`の`[server]`で`gpu_layers`を減らす（例: 18）か、`codec_gpu = false`にする。
 上流READMEではQ4_K_Mの全GPU実行で約7.2GBを見込むが、実測のサーバー分は約4 GBだった。
 `--max-tokens`を小さくしても、s2.cppが事前確保するKVキャッシュ全体が小さくなるわけではない。
 
 ```powershell
 Copy-Item "<presenter>/tools/presenter.example.toml" "$env:LOCALAPPDATA\presenter-tts\config.toml"
+uv run --project "<presenter>/tools" presenter-tts speak "<presenter>/tools/examples/presentation.ssml" --output outputs/presentation.wav --play
+```
+
+Macでは次のように設定を置く。
+
+```bash
+tts_root="${PRESENTER_TTS_HOME:-$HOME/.local/share/presenter-tts}"
+mkdir -p "$tts_root"
+test -e "$tts_root/config.toml" || cp "<presenter>/tools/presenter.example.toml" "$tts_root/config.toml"
 uv run --project "<presenter>/tools" presenter-tts speak "<presenter>/tools/examples/presentation.ssml" --output outputs/presentation.wav --play
 ```
 
@@ -91,7 +108,7 @@ voice = "myvoice"
 
 録音と、その録音で話している内容をそのまま書いた文字起こしから、声のプロファイルを作る。
 
-```powershell
+```console
 uv run --project "<presenter>/tools" presenter-tts voice add myvoice 録音.wav --text "録音で話している内容"
 ```
 
@@ -104,7 +121,7 @@ uv run --project "<presenter>/tools" presenter-tts voice add myvoice 録音.wav 
 登録した声は`<home>/voices/`に入り、どのプロジェクトからも名前で使える。
 `<home>/cache/`（エンジン・モデル・キャッシュ）とは分けてあるので、容量を空けるために`cache/`を消しても声は残る。
 
-```powershell
+```console
 uv run --project "<presenter>/tools" presenter-tts voice list
 uv run --project "<presenter>/tools" presenter-tts say --voice myvoice
 uv run --project "<presenter>/tools" presenter-tts speak "<presenter>/tools/examples/presentation.ssml" --voice myvoice --force

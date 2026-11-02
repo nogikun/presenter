@@ -13,6 +13,8 @@ from .audio import AudioError
 from .narrate import read_json, seconds, write_player
 
 BROWSERS = ["chrome", "msedge", "google-chrome", "chromium",
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
             r"C:\Program Files\Google\Chrome\Application\chrome.exe",
             r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"]
 

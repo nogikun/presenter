@@ -2,6 +2,7 @@
 
 import functools
 import json
+import platform
 from pathlib import Path
 import shutil
 import subprocess
@@ -12,7 +13,7 @@ import webbrowser
 
 import typer
 
-from . import api as speech_api, server, voices
+from . import api as speech_api, runtime, server, voices
 from .audio import AudioError, Backend, render
 from .narrate import narrate as narrate_deck, read_json, voice_name as narrate_voice
 from .play import server as play_server
@@ -91,6 +92,10 @@ def doctor(ctx: typer.Context):
     import socket
     import re
     config = load_config(ctx)
+    try:
+        profile = runtime.current()
+    except ValueError:
+        profile = {"platform": sys.platform, "accelerator": None}
     result = {"python": sys.version.split()[0], "ffmpeg": shutil.which("ffmpeg"),
               "ffplay": shutil.which("ffplay"), "backend": config.get("backend", "s2cpp")}
     try:
@@ -102,6 +107,7 @@ def doctor(ctx: typer.Context):
     result["home"] = {"path": str(voices.HOME), "config": voices.CONFIG.is_file(),
                       "voices": [p["name"] for p in voices.profiles()]}
     result["engine"] = {"ready": engine_ok, "missing": engine_note, "cuda_root": cuda_root,
+                        "accelerator": profile["accelerator"],
                         "cache": str(voices.RUNTIME)}
     nvcc = str(Path(cuda_root) / "bin" / "nvcc.exe") if cuda_root else shutil.which("nvcc")
     cuda_version = None
@@ -116,10 +122,19 @@ def doctor(ctx: typer.Context):
             [str(vswhere), "-latest", "-products", "*", "-requires",
              "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", "-property", "installationPath"],
             capture_output=True, text=True, timeout=30).stdout.strip() or None
-    result["prerequisites"] = {"windows": sys.platform == "win32", "uv": shutil.which("uv"),
+    xcrun = shutil.which("xcrun")
+    metal = subprocess.run([xcrun, "--find", "metal"], capture_output=True, text=True).stdout.strip() \
+        if xcrun and sys.platform == "darwin" else None
+    cmake = shutil.which("cmake") or (visual_studio and "bundled with Visual Studio") \
+        or (shutil.which("uv") and "uvx --from cmake cmake")
+    result["prerequisites"] = {"platform": profile["platform"],
+                               "architecture": platform.machine(),
+                               "windows": sys.platform == "win32", "macos": sys.platform == "darwin",
+                               "uv": shutil.which("uv"),
                                "git": shutil.which("git"), "nvcc": nvcc, "cuda_version": cuda_version,
                                "visual_studio_cpp": visual_studio,
-                               "cmake": shutil.which("cmake") or (visual_studio and "bundled with Visual Studio")}
+                               "metal": metal,
+                               "cmake": cmake}
     command = shutil.which("nvidia-smi")
     if command:
         proc = subprocess.run([command, "--query-gpu=name,memory.total,memory.free",

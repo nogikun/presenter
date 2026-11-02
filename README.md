@@ -41,9 +41,9 @@ npx skills add nogikun/presenter
 
 入れたあとはエージェントに頼みます。
 
-1. 「presenterをセットアップして」 → presenter-setupが環境を調べ、必要なものを（承認を得てから）入れ、エンジンをビルドします（初回は約30分）
+1. 「presenterをセットアップして」 → presenter-setupがOSを判定し、WindowsはCUDA、MacはMetalでエンジンをビルドします（初回は約30分）
 2. 「html-deckでスライドを作って、presentation-jaで原稿も作って」
-3. 「そのスライドに私の声でナレーションを付けて」 → presenterが音声とプレーヤーを作ります（生成は発表の長さの約1.4倍の時間がかかります）
+3. 「そのスライドに私の声でナレーションを付けて」 → presenterが音声とプレーヤーを作ります（RTX 3080実測で発表の長さの約1.4倍。Macは未計測）
 4. 「MP4にも書き出して」 → `presentation.mp4`ができ、プレーヤーにも「MP4 を保存」が出ます
 
 できあがるもの（`<deck>/narration/`）:
@@ -61,13 +61,13 @@ presenterのコードは`skills/presenter/tools/`（uvのプロジェクト）�
 
 ## 必要な環境
 
-- Windows 10/11、NVIDIA GPU（VRAM 6 GB以上。RTX 3080で確認）、CUDA Toolkit 12.4以上
-- uv、Git、FFmpeg、Visual Studio C++ ビルドツール（presenter-setupが確認し、足りなければ承認を得てから入れます）
+- Windows 10/11とNVIDIA GPU（VRAM 6 GB以上、CUDA Toolkit 12.4以上）、またはApple Silicon MacとMetal
+- uv、Git、FFmpeg、CMake。WindowsはVisual Studio C++、MacはXcode Command Line Toolsも必要
 - MP4の書き出しには、ChromeかEdge
 
 ## ファイルの置き場所
 
-エンジン・モデル・声はユーザー共通の`%LOCALAPPDATA%\presenter-tts`に置き、どのプロジェクトからも共有します（環境変数`PRESENTER_TTS_HOME`で変更可）。スキルを更新しても消えません。
+エンジン・モデル・声はユーザー共通の`%LOCALAPPDATA%\presenter-tts`（Windows）または`~/.local/share/presenter-tts`（Mac）に置き、どのプロジェクトからも共有します（環境変数`PRESENTER_TTS_HOME`で変更可）。スキルを更新しても消えません。
 
 | 場所 | 中身 | 消してよいか |
 |---|---|---|
@@ -94,8 +94,8 @@ presenterのコードは`skills/presenter/tools/`（uvのプロジェクト）�
 このリポジトリのコードは[MITライセンス](LICENSE)です。
 プレーヤー（`player.html`）に埋め込んだアイコンは[Lucide](https://lucide.dev)（ISCライセンス、一部はFeather由来でMITライセンス）で、ライセンス表記はそのファイル内にあります。
 
-s2.cppとFish Audio S2 Proのモデルは同梱していません。presenter-setup（`setup-s2.ps1`）が利用者の環境に取得します。
+s2.cppとFish Audio S2 Proのモデルは同梱していません。presenter-setupがWindowsでは`setup-s2.ps1`、Macでは`setup-s2.sh`を使って取得します。
 これらは**Fish Audio Research License**で提供されており、研究・非商用の利用は無償、商用利用にはFish Audioとの別途の契約が必要です。
-詳細は取得後の`%LOCALAPPDATA%\presenter-tts\cache\s2.cpp\LICENSE.md`を参照してください。
+詳細は取得後の`<home>/cache/s2.cpp/LICENSE.md`を参照してください。
 
 > This model is licensed under the Fish Audio Research License, Copyright © 39 AI, INC. All Rights Reserved.

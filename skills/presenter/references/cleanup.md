@@ -1,7 +1,7 @@
 # ローカルデータの片付け
 
 presenterが手元に置くデータを、何を消してよいかと一緒に整理し、確かめてから消す手順。
-`<home>`は`%LOCALAPPDATA%\presenter-tts`（環境変数`PRESENTER_TTS_HOME`があればその値）、`<presenter>`はpresenterスキルのフォルダ。
+`<home>`はWindowsでは`%LOCALAPPDATA%\presenter-tts`、Macでは`~/.local/share/presenter-tts`（環境変数`PRESENTER_TTS_HOME`があればその値）。`<presenter>`はpresenterスキルのフォルダ。
 
 ## 置いてあるもの
 
@@ -36,6 +36,14 @@ uv run --project "<presenter>/tools" presenter-tts voice list
 
 PowerShellの`$home`は予約済みの変数なので、別の名前（ここでは`$h`）を使う。
 
+Macでは次のように確認する。
+
+```bash
+tts_root="${PRESENTER_TTS_HOME:-$HOME/.local/share/presenter-tts}"
+du -sh "$tts_root" "$tts_root"/* 2>/dev/null
+uv run --project "<presenter>/tools" presenter-tts voice list
+```
+
 ### 2. 消す範囲を決めて、ユーザーに見せる
 
 ユーザーの目的から範囲を選び、**消すパス、容量、消したあとに起きること**を一覧にして確認を取る。確認なしに消さない。
@@ -54,7 +62,7 @@ PowerShellの`$home`は予約済みの変数なので、別の名前（ここで
 
 ビルドやモデルを使っているサーバーが動いていると、ファイルを消せない。
 
-```powershell
+```console
 uv run --project "<presenter>/tools" presenter-tts server stop
 uv run --project "<presenter>/tools" presenter-tts server status
 ```
@@ -69,9 +77,11 @@ uv run --project "<presenter>/tools" presenter-tts server status
 Remove-Item -Recurse -Force (Join-Path $h 'cache\models')
 ```
 
+Macでは`tts_root`の絶対パスが`/`やホームディレクトリそのものではないことを確認し、同じく対象を`<home>/cache/models/`のように完全に特定してから削除する。`$HOME`や`<home>`全体へ再帰削除をかけない。可能なら先にゴミ箱へ移す。
+
 声は専用のコマンドで消す（声のファイル、参考音声、文字起こし、その声のフィラーをまとめて消す）。
 
-```powershell
+```console
 uv run --project "<presenter>/tools" presenter-tts voice remove <名前> --yes
 ```
 
@@ -83,17 +93,19 @@ uv run --project "<presenter>/tools" presenter-tts voice remove <名前> --yes
 ## アンインストール
 
 1. サーバーを止める（手順3）。
-2. 消すものをユーザーに見せる。**声・設定・APIキーも消えること**を明示して、確認を取る。声を残したい場合は、先に`<home>\voices`を別の場所へコピーしてもらう。
+2. 消すものをユーザーに見せる。**声・設定・APIキーも消えること**を明示して、確認を取る。声を残したい場合は、先に`<home>/voices/`を別の場所へコピーしてもらう。
 3. `<home>`をまるごと消す。
 
    ```powershell
    Remove-Item -Recurse -Force $h
    ```
 
+   Macでは解決した`<home>`の絶対パスを再確認してから、フォルダごとゴミ箱へ移す。`$HOME`や`~`を削除対象にしない。
+
 4. `<presenter>/tools/.venv`を消す（スキル自体を残す場合も、次の`uv run`で作り直される）。
 5. スキル自体を消す場合は、インストールした先のフォルダ（例: `.claude/skills/presenter/`）を消すか、`npx skills`の削除機能を使う。
 
-CUDA Toolkit、Visual Studio、FFmpeg、uvなど、presenter-setupが入れた（または入っていた）システムのソフトは、ほかのソフトも使っている可能性がある。消すかどうかはユーザーが決める。このスキルからは消さない。
+CUDA Toolkit、Visual Studio、Xcode Command Line Tools、Homebrew、FFmpeg、uvなど、presenter-setupが入れた（または入っていた）システムのソフトは、ほかのソフトも使っている可能性がある。消すかどうかはユーザーが決める。このスキルからは消さない。
 
 ## 古い配置の名残
 

@@ -1,11 +1,16 @@
 """Run the s2.cpp TTS server as a background process: start, stop and status."""
 
+import os
+from pathlib import Path
+import signal
 import socket
 import subprocess
+import sys
 import time
 from urllib.parse import urlsplit
 
 from .audio import AudioError, Backend
+from . import runtime
 from .voices import RUNTIME, engine
 
 PID_FILE = RUNTIME / "s2-server.pid"
@@ -26,15 +31,19 @@ def reachable(config, timeout=.5):
 
 
 def recorded_pid():
-    """PID of the server this tool started, if that process is still s2.exe."""
+    """PID of the server this tool started, if that process is still s2."""
     try:
         pid = int(PID_FILE.read_text(encoding="ascii").strip())
     except (OSError, ValueError):
         return None
-    # A stale PID may belong to another program by now; only trust it while it is s2.exe.
-    found = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
-                           capture_output=True, text=True, errors="replace").stdout
-    return pid if '"s2.exe"' in found.lower() else None
+    # A stale PID may belong to another program by now; verify its executable name before stopping it.
+    if sys.platform == "win32":
+        found = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
+                               capture_output=True, text=True, errors="replace").stdout
+        return pid if '"s2.exe"' in found.lower() else None
+    found = subprocess.run(["ps", "-p", str(pid), "-o", "comm="], capture_output=True,
+                           text=True, errors="replace").stdout.strip()
+    return pid if Path(found).name == "s2" else None
 
 
 def log_tail(lines=8):
@@ -45,7 +54,7 @@ def log_tail(lines=8):
 
 
 def start(config, wait=120.):
-    """Start s2.exe in the background (it outlives this command) and wait until it listens.
+    """Start s2.cpp in the background (it outlives this command) and wait until it listens.
 
     Settings come from [server] in the config: gpu_layers (36) and codec_gpu (true)."""
     if config.get("backend", "s2cpp") != "s2cpp":
@@ -55,15 +64,21 @@ def start(config, wait=120.):
     settings = config.get("server", {})
     host, port = endpoint(config)
     executable, model, tokenizer, env = engine()
+    try:
+        accelerator = runtime.accelerator_args(settings)
+        codec = runtime.codec_arg(settings)
+    except ValueError as exc:
+        raise AudioError(str(exc)) from exc
     command = [str(executable), "--model", str(model), "--tokenizer", str(tokenizer),
-               "--cuda", "0", "--gpu-layers", str(int(settings.get("gpu_layers", 36))),
-               "--server", "--host", host, "--port", str(port),
-               "--codec-follow-backend" if settings.get("codec_gpu", True) else "--codec-cpu"]
+               *accelerator, "--server", "--host", host, "--port", str(port),
+               codec]
     LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
     with LOG_FILE.open("ab") as log:
+        detach = ({"creationflags": subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP}
+                  if sys.platform == "win32" else {"start_new_session": True})
         process = subprocess.Popen(
             command, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, env=env,
-            creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP)
+            **detach)
     PID_FILE.write_text(str(process.pid), encoding="ascii")
     deadline = time.monotonic() + wait
     while not reachable(config):
@@ -83,7 +98,13 @@ def stop():
     PID_FILE.unlink(missing_ok=True)
     if pid is None:
         return False
-    subprocess.run(["taskkill", "/PID", str(pid), "/F"], capture_output=True)
+    if sys.platform == "win32":
+        subprocess.run(["taskkill", "/PID", str(pid), "/F"], capture_output=True)
+    else:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
     return True
 
 
