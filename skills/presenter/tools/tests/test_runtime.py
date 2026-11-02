@@ -31,6 +31,16 @@ class RuntimeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'auto, cuda, metal, or cpu'):
             runtime.accelerator_args({'accelerator': 1}, 'darwin')
 
+    def test_auto_threads_uses_performance_cores_on_macos_only(self):
+        from unittest.mock import patch
+        done = type('Done', (), {'stdout': '4\n'})()
+        with patch('presenter_tts.runtime.subprocess.run', return_value=done) as run:
+            self.assertEqual(runtime.auto_threads('darwin'), 4)
+            self.assertEqual(runtime.auto_threads('win32'), 0)
+        run.assert_called_once()
+        with patch('presenter_tts.runtime.subprocess.run', side_effect=OSError):
+            self.assertEqual(runtime.auto_threads('darwin'), 0)
+
 
 if __name__ == '__main__':
     unittest.main()

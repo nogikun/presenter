@@ -32,6 +32,7 @@ uv run --project "<presenter>/tools" presenter-tts server stop
 - 動いている間はGPUメモリ（Macではユニファイドメモリ）を約4.6 GB使う。使い終わったら`stop`で止める。
 - `stop`で止まるのは、このツールが起動したサーバーだけ。s2.cppを手動で起動した場合は、そのターミナルでCtrl+Cを押して止める。
 - GPUに載せる層の数やコーデックの置き場所は、設定の`[server]`（`gpu_layers`、`codec_gpu`）で変える。
+- `[server] parallel`を2以上にすると、`url`のポートから連番で同じ数のサーバーを起動し、`narrate`がスライドを分けて同時に作る。`stop`はすべて止める。2台目以降のログは`<home>/cache/s2-server-<ポート>.log`。
 - 起動時の出力は`<home>/cache/s2-server.log`に残る。起動に失敗したときは、このログの末尾も表示する。
 
 ## 2. 話させる（say）
@@ -189,6 +190,8 @@ OS、CPUアーキテクチャ、CUDA/Metal、FFmpeg/FFplay、ネットワーク�
 | `[server]` | `gpu_device` | CUDAのデバイス番号（既定0。Metalでは使わない） |
 | `[server]` | `gpu_layers` | GPUに載せる層の数（既定36＝全部） |
 | `[server]` | `codec_gpu` | CUDAで音声コーデックもGPUへ載せるか（既定true）。Metalは未対応のPAD演算があるため常にCPU |
+| `[server]` | `threads` | サーバー1台が使うCPUスレッド数（既定0＝自動。Macは高性能コアの数、Windowsはs2.cppが決める） |
+| `[server]` | `parallel` | `narrate`で同時に動かすサーバーの数（既定1、最大8）。1台あたりメモリ約4.6 GB |
 | `[say]` | `filler` | フィラーを使うか |
 | `[say]` | `filler_after_ms` | 本文がこの時間までに届かなければフィラーを流す |
 | `[say]` | `filler_probability` | フィラーを流す確率 |

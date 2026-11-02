@@ -95,6 +95,14 @@ class NarrateTests(unittest.TestCase):
         (self.deck / 'index.html').write_text('<title>検索 &amp; 発表</title>', encoding='utf-8')
         self.assertEqual(self.run_narrate()['title'], '検索 & 発表')
 
+    def test_parallel_servers_share_the_slides(self):
+        urls = []
+        with patch('presenter_tts.narrate.Backend', lambda config: urls.append(config['url']) or StubBackend(config)):
+            result = self.run_narrate({'server': {'parallel': 2}})
+        self.assertEqual(urls, ['http://127.0.0.1:3030', 'http://127.0.0.1:3031'])
+        self.assertEqual(sorted(StubBackend.spoken), sorted(['こんにちは。', '今日は検索の話です。', '限界もあります。']))
+        self.assertEqual([s['id'] for s in result['slides']], ['intro', 'limits'])
+
     def test_missing_sentence_timings_resynthesize_the_slide(self):
         self.run_narrate()
         (self.deck / 'narration/audio/limits.json').unlink()

@@ -18,6 +18,11 @@ gpu_device = 0
 gpu_layers = 36
 # CUDA can run the audio codec on the GPU too; Metal keeps it on the CPU because PAD is unsupported.
 codec_gpu = true
+# CPU threads per server. 0 = automatic: the performance cores on macOS, s2.cpp's choice on Windows.
+threads = 0
+# Servers narrate runs at once, on consecutive ports from url (about 4.6 GB of memory each).
+# Whether it helps depends on the machine; measure before raising it.
+parallel = 1
 
 [generation]
 max_new_tokens = 768

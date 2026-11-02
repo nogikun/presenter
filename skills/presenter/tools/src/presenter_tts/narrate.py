@@ -1,16 +1,20 @@
 """Narrate an html-deck deck from presentation-ja's checked script: per-slide WAVs, one joined WAV,
 a timeline and an HTML player that shows each slide while its narration plays."""
 
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import html
 from importlib import resources
 import json
 import os
 from pathlib import Path
+import queue
 import re
+import threading
 from urllib.parse import quote
 import wave
 
+from . import server
 from .audio import AudioError, Backend, render
 from .say import segments as split
 from .ssml import Pause, Speech, Style
@@ -163,19 +167,38 @@ def narrate(config, deck, narration=None, force=False, log=print, checked=None, 
              "speaker": config.get("speaker", 3), "url": config.get("url"),
              "generation": config.get("generation", {}),
              "max_chars": int(config.get("say", {}).get("max_chars", 40))}
-    backend, timeline, start = Backend(config), [], 0.0
-    for index, ((slide, parts), slide_url) in enumerate(zip(slides, slide_urls), 1):
+    todo = []
+    for index, (slide, parts) in enumerate(slides, 1):
         key = sha(json.dumps({**basis, "segments": [[p["text"], p.get("pause_after_seconds", 0)]
                                                     for p in parts]},
                              ensure_ascii=False, sort_keys=True).encode())
         wav = audio / f"{slide['id']}.wav"
         if force or cache.get(slide["id"]) != key or not wav.is_file() or not wav.with_suffix(".json").is_file():
-            log(f"[{index}/{len(slides)}] {slide['id']}: synthesizing")
-            render(events(parts, basis["max_chars"]), backend, wav, force=True)
-            cache[slide["id"]] = key
-            cache_path.write_text(json.dumps(cache, indent=2) + "\n", encoding="utf-8")
+            todo.append((index, slide, parts, wav, key))
         else:
             log(f"[{index}/{len(slides)}] {slide['id']}: unchanged, reused")
+    # [server] parallel servers each take the next waiting slide; one server keeps deck order.
+    backends, lock = queue.Queue(), threading.Lock()
+    for one in server.instances(config):
+        backends.put(Backend(one))
+
+    def synthesize(job):
+        index, slide, parts, wav, key = job
+        backend = backends.get()
+        try:
+            log(f"[{index}/{len(slides)}] {slide['id']}: synthesizing")
+            render(events(parts, basis["max_chars"]), backend, wav, force=True)
+        finally:
+            backends.put(backend)
+        with lock:
+            cache[slide["id"]] = key
+            cache_path.write_text(json.dumps(cache, indent=2) + "\n", encoding="utf-8")
+
+    with ThreadPoolExecutor(backends.qsize()) as pool:
+        list(pool.map(synthesize, todo))
+    timeline, start = [], 0.0
+    for (slide, parts), slide_url in zip(slides, slide_urls):
+        wav = audio / f"{slide['id']}.wav"
         length = seconds(wav)
         # render() records where each sentence landed; the player's transcript seeks by these.
         report = read_json(wav.with_suffix(".json"))

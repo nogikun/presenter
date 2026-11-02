@@ -9,6 +9,7 @@ import wave
 from typer.testing import CliRunner
 
 from presenter_tts import voices
+from presenter_tts.audio import AudioError
 from presenter_tts.cli import app
 
 
@@ -164,6 +165,7 @@ class VoiceCommandTests(unittest.TestCase):
                 patch.object(server, 'PID_FILE', self.folder / 'pid'), \
                 patch('presenter_tts.server.engine', return_value=('s2', 'm', 't', {})), \
                 patch('presenter_tts.server.reachable', return_value=False), \
+                patch('presenter_tts.runtime.auto_threads', return_value=0), \
                 patch('presenter_tts.server.subprocess.Popen', return_value=dead):
             result = self.invoke('server', 'start')
         self.assertEqual(result.exit_code, 2)
@@ -181,9 +183,11 @@ class VoiceCommandTests(unittest.TestCase):
                 patch('presenter_tts.runtime.current', return_value=profile), \
                 patch('presenter_tts.server.engine', return_value=('s2', 'm', 't', {})), \
                 patch('presenter_tts.server.reachable', side_effect=[False, True]), \
+                patch('presenter_tts.runtime.auto_threads', return_value=4), \
                 patch('presenter_tts.server.subprocess.Popen', return_value=process) as popen:
             self.assertTrue(server.start({'backend': 's2cpp'}))
         command = popen.call_args.args[0]
+        self.assertEqual(command[command.index('--threads') + 1], '4')  # threads = 0: automatic
         self.assertIn('--metal', command)
         self.assertNotIn('--cuda', command)
         self.assertIn('--codec-cpu', command)
@@ -201,6 +205,37 @@ class VoiceCommandTests(unittest.TestCase):
                 patch('presenter_tts.server.os.kill') as kill:
             self.assertTrue(server.stop())
         kill.assert_called_once_with(42, server.signal.SIGTERM)
+
+    def test_parallel_servers_get_consecutive_ports_threads_and_own_files(self):
+        from presenter_tts import server
+        process = type('Proc', (), {'pid': 7, 'poll': lambda self: None})()
+        config = {'backend': 's2cpp', 'server': {'parallel': 2, 'threads': 4}}
+        with patch.object(server, 'LOG_FILE', self.folder / 's2-server.log'), \
+                patch.object(server, 'PID_FILE', self.folder / 's2-server.pid'), \
+                patch('presenter_tts.server.engine', return_value=('s2', 'm', 't', {})), \
+                patch('presenter_tts.server.reachable', side_effect=[False, True, False, True]), \
+                patch('presenter_tts.server.subprocess.Popen', return_value=process) as popen:
+            self.assertTrue(server.start(config))
+        commands = [c.args[0] for c in popen.call_args_list]
+        self.assertEqual([c[c.index('--port') + 1] for c in commands], ['3030', '3031'])
+        self.assertTrue(all(c[c.index('--threads') + 1] == '4' for c in commands))
+        self.assertTrue((self.folder / 's2-server.pid').is_file())
+        self.assertTrue((self.folder / 's2-server-3031.pid').is_file())
+        with patch.object(server, 'PID_FILE', self.folder / 's2-server.pid'), \
+                patch('presenter_tts.server.recorded_pid', return_value=7), \
+                patch('presenter_tts.server.subprocess.run'), \
+                patch('presenter_tts.server.os.kill'):
+            self.assertTrue(server.stop())
+        self.assertEqual(list(self.folder.glob('s2-server*.pid')), [])
+
+    def test_bad_parallel_or_threads_setting_is_refused(self):
+        from presenter_tts import server
+        with self.assertRaisesRegex(AudioError, 'parallel'):
+            server.instances({'server': {'parallel': 0}})
+        with patch('presenter_tts.server.engine', return_value=('s2', 'm', 't', {})), \
+                patch('presenter_tts.server.reachable', return_value=False), \
+                self.assertRaisesRegex(AudioError, 'threads'):
+            server.start({'server': {'threads': -1}})
 
     def test_narrate_forwards_an_alternate_check_folder(self):
         checked = self.folder / 'checked-v2'

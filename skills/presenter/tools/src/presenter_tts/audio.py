@@ -76,14 +76,14 @@ class Backend:
         if not 1 <= self.timeout <= 600:
             raise AudioError("TTS timeout must be between 1 and 600 seconds")
 
-    def post(self, path, data, content_type="application/json"):
+    def post(self, path, data, content_type="application/json", timeout=None):
         request = urllib.request.Request(self.url + path, data=data,
                                          headers={"Content-Type": content_type})
         for attempt in range(40):
             try:
                 # A local voice request should not traverse an HTTP proxy from the environment.
                 opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-                return opener.open(request, timeout=self.timeout)
+                return opener.open(request, timeout=timeout or self.timeout)
             except urllib.error.HTTPError as exc:
                 # s2.cpp releases its busy flag just after the previous stream ends; wait up to 10 s.
                 if exc.code == 503 and attempt < 39:
@@ -99,6 +99,7 @@ class Backend:
     def synthesize(self, text, live=True):
         """live=False: nobody hears the PCM as it arrives (no playback), so it may come late."""
         if self.kind == "s2cpp":
+            timeout = None
             params = {"stream": True, "chunked": True, "output_format": "pcm_s16le",
                       "stream_decode_stride_frames": 4, "stream_holdback_frames": 8,
                       "stream_start_buffer_ms": 0, "max_new_tokens": 768,
@@ -111,16 +112,18 @@ class Backend:
             if not live and runtime.codec_arg(self.config.get("server", {})) == "--codec-cpu":
                 # Each stride re-decodes the clip so far, which on a CPU codec (Metal) doubled the
                 # time on an M5. Without playback, decode about once per sentence; 256 frames
-                # (~12 s of audio) still sends PCM well within the read timeout. A GPU codec
-                # (CUDA's default) keeps its measured settings.
+                # (~12 s of audio) bounds the silence; a busy machine ([server] parallel) can still
+                # take minutes for that, so allow up to 600 s. A GPU codec (CUDA's default) keeps
+                # its measured settings.
                 params["stream_decode_stride_frames"] = max(256, int(params["stream_decode_stride_frames"]))
+                timeout = max(self.timeout, 600)
             # These values are a wire contract, not user-selectable generation options.
             params.update(stream=True, chunked=True, output_format="pcm_s16le")
             fields = {"text": text, "params": json.dumps(params)}
             if self.config.get("voice"):
                 fields["voice"] = self.config["voice"]
             payload, content_type = multipart(fields)
-            with self.post("/generate", payload, content_type) as response:
+            with self.post("/generate", payload, content_type, timeout) as response:
                 encoding = response.headers.get("X-Audio-Encoding", "").lower()
                 if encoding != "pcm_s16le":
                     raise AudioError("s2.cpp must return X-Audio-Encoding: pcm_s16le; update the server")

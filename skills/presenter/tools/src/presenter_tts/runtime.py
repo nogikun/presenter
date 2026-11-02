@@ -1,5 +1,6 @@
 """Platform-specific s2.cpp paths and accelerator arguments."""
 
+import subprocess
 import sys
 from pathlib import Path
 
@@ -58,3 +59,16 @@ def codec_arg(settings, platform=None):
     """Keep the codec on CPU for Metal, whose PAD operation is currently unsupported."""
     return ("--codec-follow-backend" if settings.get("codec_gpu", True)
             and accelerator(settings, platform) == "cuda" else "--codec-cpu")
+
+
+def auto_threads(platform=None):
+    """CPU threads for [server] threads = 0. macOS: the performance cores only; adding the
+    efficiency cores slowed an M5 (4 threads 6.3 min per audio minute, all 10 7.4). Elsewhere 0
+    leaves the choice to s2.cpp."""
+    if (platform or sys.platform) != "darwin":
+        return 0
+    try:
+        return int(subprocess.run(["sysctl", "-n", "hw.perflevel0.physicalcpu"], capture_output=True,
+                                  text=True, check=True).stdout)
+    except (OSError, ValueError, subprocess.CalledProcessError):
+        return 0  # No performance levels (an Intel Mac): let s2.cpp decide.

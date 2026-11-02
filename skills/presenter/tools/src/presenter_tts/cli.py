@@ -63,7 +63,8 @@ def load_config(ctx, voice=None):
 
 
 def ensure_server(config):
-    if not server.reachable(config) and config.get("server", {}).get("auto_start", True):
+    if (not all(server.reachable(one) for one in server.instances(config))
+            and config.get("server", {}).get("auto_start", True)):
         typer.echo("Starting the TTS server in the background (stop it with: server stop)...", err=True)
     server.ensure(config)
 
@@ -316,7 +317,8 @@ def server_start(ctx: typer.Context):
     config = load_config(ctx)
     typer.echo("Starting the TTS server (loading the model)...")
     if server.start(config):
-        typer.echo(f"Running: {server.status(config)['url']} (log: {server.LOG_FILE})")
+        for info in server.status(config):
+            typer.echo(f"Running: {info['url']} (log: {info['log']})")
     else:
         typer.echo("Already running")
 
@@ -325,12 +327,12 @@ def server_start(ctx: typer.Context):
 @handled
 def server_status(ctx: typer.Context):
     """Show whether the TTS server is listening and which process this tool started."""
-    info = server.status(load_config(ctx))
-    state = "listening" if info["listening"] else "not running"
-    owner = f", pid {info['pid']} (started here)" if info["pid"] else (
-        ", started elsewhere" if info["listening"] else "")
-    typer.echo(f"{info['url']}: {state}{owner}")
-    typer.echo(f"log: {info['log']}")
+    for info in server.status(load_config(ctx)):
+        state = "listening" if info["listening"] else "not running"
+        owner = f", pid {info['pid']} (started here)" if info["pid"] else (
+            ", started elsewhere" if info["listening"] else "")
+        typer.echo(f"{info['url']}: {state}{owner}")
+        typer.echo(f"log: {info['log']}")
 
 
 @server_app.command("stop")

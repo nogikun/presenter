@@ -341,11 +341,15 @@ class HTTPContractTests(unittest.TestCase):
                 with self.assertRaises(AudioError):
                     with backend.synthesize('hello', live=live):
                         pass
-            return post.call_args.args[1]
-        self.assertIn(b'"stream_decode_stride_frames": 256', request('darwin', False))
-        self.assertIn(b'"stream_decode_stride_frames": 16', request('darwin', True))
-        # CUDA's GPU codec keeps the measured streaming stride even for files.
-        self.assertIn(b'"stream_decode_stride_frames": 16', request('win32', False))
+            return post.call_args.args[1], post.call_args.args[3]
+        data, timeout = request('darwin', False)
+        self.assertIn(b'"stream_decode_stride_frames": 256', data)
+        self.assertEqual(timeout, 600)  # Long silences before PCM arrives.
+        self.assertIsNone(request('darwin', True)[1])
+        self.assertIn(b'"stream_decode_stride_frames": 16', request('darwin', True)[0])
+        # CUDA's GPU codec keeps the measured streaming stride and timeout even for files.
+        self.assertIsNone(request('win32', False)[1])
+        self.assertIn(b'"stream_decode_stride_frames": 16', request('win32', False)[0])
 
     def test_voice_switching(self):
         from presenter_tts.voices import set_voice
