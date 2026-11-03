@@ -82,7 +82,7 @@ class SSMLTests(unittest.TestCase):
 
 class StubBackend:
     @contextmanager
-    def synthesize(self, text):
+    def synthesize(self, text, live=True):
         yield Format(16000), iter([b'\x01', b'\x00' * 3199])
 
 
@@ -107,7 +107,7 @@ class RenderTests(unittest.TestCase):
                 self.delay = delay
 
             @contextmanager
-            def synthesize(self, text):
+            def synthesize(self, text, live=True):
                 def chunks():
                     time.sleep(self.delay)
                     yield b'\x02\x00' * 1600
@@ -136,7 +136,7 @@ class RenderTests(unittest.TestCase):
     def test_error_does_not_replace_existing_output(self):
         class BrokenBackend:
             @contextmanager
-            def synthesize(self, text):
+            def synthesize(self, text, live=True):
                 def chunks():
                     yield b'\0\0'
                     raise AudioError('backend disconnected')
@@ -157,7 +157,7 @@ class RenderTests(unittest.TestCase):
     def test_empty_or_odd_audio_is_not_published(self):
         class EmptyBackend:
             @contextmanager
-            def synthesize(self, text):
+            def synthesize(self, text, live=True):
                 yield Format(16000), iter([b'\0'])
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'x.wav'
@@ -187,8 +187,8 @@ class RenderTests(unittest.TestCase):
         errors = []
 
         def source():
-            # Half a second of PCM, then wait as a real TTS stream might.
-            yield b'\1\0' * 8000
+            # Exceed FFmpeg 8's atempo buffer, then wait as a real TTS stream might.
+            yield b'\1\0' * 64000
             if not release_input.wait(8):
                 raise RuntimeError('test input was not released')
             yield b'\1\0' * 8000
@@ -289,6 +289,53 @@ class WireTests(unittest.TestCase):
         self.assertEqual(json.loads(self.requests[-1][2])['prePhonemeLength'], 0)
 
 
+class MacPlaybackTests(unittest.TestCase):
+    def play(self, mac_player):
+        from unittest.mock import MagicMock
+        popen = MagicMock()
+        popen.return_value.wait.return_value = 0
+        with tempfile.TemporaryDirectory() as folder, \
+                patch('presenter_tts.audio.sys.platform', 'darwin'), \
+                patch('presenter_tts.audio.mac_pcm_player', **mac_player), \
+                patch('presenter_tts.audio.shutil.which', return_value='/bin/ffplay'), \
+                patch('presenter_tts.audio.subprocess.Popen', popen):
+            render([Speech('a', Style())], StubBackend(), Path(folder) / 'out.wav', play=True)
+        return popen.call_args.args[0], popen.return_value.stdin
+
+    def test_streams_to_the_core_audio_helper_and_flushes_each_write(self):
+        command, stdin = self.play({'return_value': '/cache/player'})
+        self.assertEqual(command, ['/cache/player', '16000', '1'])
+        self.assertEqual(b''.join(c.args[0] for c in stdin.write.call_args_list), b'\x01' + b'\x00' * 3199)
+        stdin.flush.assert_called()
+
+    def test_falls_back_to_ffplay_when_the_helper_cannot_be_built(self):
+        command, _ = self.play({'side_effect': AudioError('no build')})
+        self.assertEqual(command[0], '/bin/ffplay')
+
+    def test_helper_is_built_once_per_source_content(self):
+        from presenter_tts import audio
+        built = []
+
+        def swiftc(command, **kwargs):
+            built.append(command)
+            Path(command[-1]).write_bytes(b'bin')
+            return type('Done', (), {'returncode': 0, 'stderr': ''})()
+
+        with tempfile.TemporaryDirectory() as folder, \
+                patch('presenter_tts.voices.RUNTIME', Path(folder)), \
+                patch('presenter_tts.audio.shutil.which', return_value='/usr/bin/swiftc'), \
+                patch('presenter_tts.audio.subprocess.run', side_effect=swiftc):
+            first = audio.mac_pcm_player()
+            self.assertEqual(audio.mac_pcm_player(), first)
+            self.assertRegex(Path(first).name, r'^macos-pcm-player-[0-9a-f]{12}$')
+        self.assertEqual(len(built), 1)
+
+    def test_no_swift_means_no_helper(self):
+        from presenter_tts import audio
+        with patch('presenter_tts.audio.shutil.which', return_value=None):
+            self.assertIsNone(audio.mac_pcm_player())
+
+
 class HTTPContractTests(unittest.TestCase):
     def test_s2_request_contract_without_network(self):
         response = io.BytesIO(b'\1\0' * 160)
@@ -332,6 +379,24 @@ class HTTPContractTests(unittest.TestCase):
                     pass
         self.assertIn(b'"stream_start_buffer_ms": 300', post.call_args.args[1])
         self.assertNotIn(b'per_char', post.call_args.args[1])
+
+    def test_cpu_codec_decodes_once_unless_someone_listens(self):
+        def request(platform, live):
+            backend = Backend({'generation': {'stream_decode_stride_frames': 16}})
+            with patch('presenter_tts.runtime.sys.platform', platform), \
+                    patch.object(backend, 'post', side_effect=AudioError('stop')) as post:
+                with self.assertRaises(AudioError):
+                    with backend.synthesize('hello', live=live):
+                        pass
+            return post.call_args.args[1], post.call_args.args[3]
+        data, timeout = request('darwin', False)
+        self.assertIn(b'"stream_decode_stride_frames": 256', data)
+        self.assertEqual(timeout, 600)  # Long silences before PCM arrives.
+        self.assertIsNone(request('darwin', True)[1])
+        self.assertIn(b'"stream_decode_stride_frames": 16', request('darwin', True)[0])
+        # CUDA's GPU codec keeps the measured streaming stride and timeout even for files.
+        self.assertIsNone(request('win32', False)[1])
+        self.assertIn(b'"stream_decode_stride_frames": 16', request('win32', False)[0])
 
     def test_voice_switching(self):
         from presenter_tts.voices import set_voice

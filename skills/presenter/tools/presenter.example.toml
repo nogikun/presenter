@@ -1,5 +1,5 @@
-# Copy to %LOCALAPPDATA%\presenter-tts\config.toml (or pass --config) and adjust. Values below are
-# the defaults measured on an RTX 3080 (10 GB) with the Q4_K_M model; other GPUs may need others.
+# Copy to %LOCALAPPDATA%\presenter-tts\config.toml on Windows or
+# ~/.local/share/presenter-tts/config.toml on macOS (or pass --config) and adjust.
 backend = "s2cpp"
 url = "http://127.0.0.1:3030"
 timeout = 120
@@ -10,10 +10,19 @@ timeout = 120
 [server]
 # say/speak/api start the TTS server in the background when it is not running.
 auto_start = true
+# auto selects CUDA on Windows and Metal on macOS. Explicit values: cuda, metal, cpu.
+accelerator = "auto"
+# CUDA device index; Metal uses the system default device.
+gpu_device = 0
 # Layers on the GPU (36 = all, about 4 GB of VRAM); lower it if the server fails to start.
 gpu_layers = 36
-# Run the audio codec on the GPU too (faster); false keeps it on the CPU.
+# CUDA can run the audio codec on the GPU too; Metal keeps it on the CPU because PAD is unsupported.
 codec_gpu = true
+# CPU threads per server. 0 = automatic: the performance cores on macOS, s2.cpp's choice on Windows.
+threads = 0
+# Servers narrate runs at once, on consecutive ports from url (about 4.6 GB of memory each).
+# Whether it helps depends on the machine; measure before raising it.
+parallel = 1
 
 [generation]
 max_new_tokens = 768

@@ -2,7 +2,7 @@
 name: presenter
 description: html-deckのスライドとpresentation-jaの検査済み原稿から、ローカルのFish Audio S2 Pro（s2.cpp）で音声を作り、スライド一覧と文字起こしの付いたplayer.html（原稿の文を選んでそこから聞ける）と、スライドと音声を合わせたMP4を書き出す。「スライドに音声を付けて」「発表原稿を読み上げて」「ナレーションを作って」「解説動画をMP4にして」「YouTubeのようなプレーヤー」「原稿から聞きたい箇所を選びたい」「自分の声で読ませたい」「声をクローンして登録」で使う。文章の読み上げ、SSMLのWAV化、OpenAI互換の音声API、サーバー管理、片付けにも対応する。原稿はpresentation-ja、スライドはhtml-deck、初回の環境構築はpresenter-setupが担当する。
 license: MIT
-compatibility: Windows 10/11とNVIDIA GPU（VRAM 6 GB以上、CUDA Toolkit 12.4以上）、uv、FFmpeg/FFplayが必要。初回はpresenter-setupスキルでs2.cppのビルドとモデル（約3.6 GB）の取得を行う（ネットワーク接続が必要）。合成自体はローカルで完結する。s2.cppとモデルはFish Audio Research License（非商用）。
+compatibility: Windows 10/11＋NVIDIA CUDA、またはApple Silicon Mac＋Metal、uv、FFmpeg/FFplayが必要。初回はpresenter-setupでs2.cppのビルドとモデル（約3.6 GB）の取得を行う。合成自体はローカルで完結する。s2.cppとモデルはFish Audio Research License（非商用）。
 ---
 
 # presenter
@@ -16,7 +16,7 @@ html-deck（スライド） → presentation-ja（原稿の作成と検査） �
 コードは同梱の`tools/`（uvのプロジェクト、パッケージ名`presenter_tts`）にある。
 `<presenter>`をこのSKILL.mdのあるフォルダとして、すべて次の形で呼ぶ。パスに空白が入ることがあるので引用符で囲む。
 
-```powershell
+```console
 uv run --project "<presenter>/tools" presenter-tts <command> ...
 ```
 
@@ -24,7 +24,7 @@ uv run --project "<presenter>/tools" presenter-tts <command> ...
 
 ## 1. 動く状態か確かめる
 
-```powershell
+```console
 uv run --project "<presenter>/tools" presenter-tts doctor
 ```
 
@@ -49,7 +49,7 @@ TTSサーバーは`narrate`・`say`・`speak`・`api`が必要なときに自動
 
 ### 合成する
 
-```powershell
+```console
 uv run --project "<presenter>/tools" presenter-tts narrate "<deck>"
 ```
 
@@ -59,8 +59,9 @@ uv run --project "<presenter>/tools" presenter-tts narrate "<deck>"
 
 - 原稿・マップ・スライドのHTMLが、presentation-jaが検査したときと一致しなければ止まる。そのときはpresentation-jaでマップの同期と`check`/`verify`をやり直す。ハッシュだけを書き換えて通さない。
 - 声は設定の既定の声を使う。別の声なら`--voice <名前>`。声の候補は`voice list`で確かめる。
-- 生成は実時間より遅い（RTX 3080で約1.4倍）。10分の発表なら15分前後かかるので、**バックグラウンドで実行し**、始める前に目安の時間を伝える。進捗はスライドごとに標準エラーへ出る。
+- 生成は実時間より遅い（RTX 3080で約1.4倍、M5のMacBook Airで約7倍）。10分の発表ならRTX 3080で15分前後、M5のMacで75分前後かかるので、**バックグラウンドで実行し**、始める前に目安の時間を伝える。進捗はスライドごとに標準エラーへ出る。
 - 2回目以降は、本文・間・声・設定が変わったスライドだけを作り直す。全部作り直すときだけ`--force`。
+- 生成の速さは`<home>/config.toml`の`[server] threads`（CPUスレッド数、0は自動）と`parallel`（同時に動かすサーバー数）で調整できる。効果は機種で違い、遅くなることもある。変えるときはユーザーに伝え、`server stop`で止めてから1つずつ変え、短いデッキの`narrate --force`の所要時間を比べる。速くならなければ元に戻す。`parallel`は1台あたりメモリ約4.6 GBに収まる範囲にする。
 
 ### 確かめて渡す
 
@@ -76,7 +77,7 @@ uv run --project "<presenter>/tools" presenter-tts narrate "<deck>"
 
 動画（MP4）を求められたら、`narrate`の後に書き出す。ChromeかEdge（スライドの撮影）とFFmpegを使う。
 
-```powershell
+```console
 uv run --project "<presenter>/tools" presenter-tts video "<deck>"
 ```
 
@@ -86,7 +87,7 @@ uv run --project "<presenter>/tools" presenter-tts video "<deck>"
 
 声を聞き比べたい、プレーヤーで声を選びたいと言われたら、`play`でプレーヤーを開く。止めるまで動き続けるので、**バックグラウンドで実行し**、出力された`player`のURLを伝える。
 
-```powershell
+```console
 uv run --project "<presenter>/tools" presenter-tts play "<deck>"
 ```
 
@@ -100,7 +101,7 @@ uv run --project "<presenter>/tools" presenter-tts play "<deck>"
 
 ## 3. 声を登録する
 
-```powershell
+```console
 uv run --project "<presenter>/tools" presenter-tts voice add <名前> "<録音>" --text "<録音で話している内容>"
 uv run --project "<presenter>/tools" presenter-tts voice list
 ```
@@ -110,7 +111,7 @@ uv run --project "<presenter>/tools" presenter-tts voice list
 - 文字起こしは録音とそのまま一致させる。分からない部分を推測で埋めない。ユーザーに書き起こしてもらうか、聞き取れた範囲だけにする。
 - 作り直しは`--force`。失敗しても前の声は残る。
 
-声はユーザー共通の`%LOCALAPPDATA%\presenter-tts\voices\`に入り、どのプロジェクトからも名前で使える。
+声はユーザー共通の`<home>/voices/`に入り、どのプロジェクトからも名前で使える。`<home>`はWindowsでは`%LOCALAPPDATA%\presenter-tts`、Macでは`~/.local/share/presenter-tts`（`PRESENTER_TTS_HOME`で変更可）。
 
 ## そのほかの使い方
 
@@ -128,10 +129,10 @@ uv run --project "<presenter>/tools" presenter-tts voice list
 
 ## 気をつけること
 
-- 使い終わったらTTSサーバーを止める（`server stop`）。動いている間はGPUのメモリを約4 GB使う。ユーザーが続けて使う場合は残してよい。
+- 使い終わったらTTSサーバーを止める（`server stop`）。動いている間はGPUメモリ（Macではユニファイドメモリ）を約4 GB使う。ユーザーが続けて使う場合は残してよい。
 - 原稿の本文にSSMLやモデル固有のタグを足さない。読み上げ本文はpresentation-jaの`text`をそのまま使う。
 - 合成した声を公開・配布する場合は、合成音声であることを示すかどうかをユーザーに確かめる。
-- 生成に失敗したときは、エラーの1行目と`%LOCALAPPDATA%\presenter-tts\cache\s2-server.log`の末尾を読んでから対処する。原因が分からないまま再試行を繰り返さない。
+- 生成に失敗したときは、エラーの1行目と`<home>/cache/s2-server.log`の末尾を読んでから対処する。原因が分からないまま再試行を繰り返さない。
 
 ## 同梱物
 

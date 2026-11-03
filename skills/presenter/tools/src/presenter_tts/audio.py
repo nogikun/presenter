@@ -2,12 +2,14 @@
 
 from contextlib import contextmanager
 from dataclasses import dataclass
+import hashlib
 import io
 import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -17,6 +19,7 @@ import urllib.request
 import uuid
 import wave
 
+from . import runtime
 from .ssml import Mark, Pause, Speech, Style
 
 
@@ -75,14 +78,14 @@ class Backend:
         if not 1 <= self.timeout <= 600:
             raise AudioError("TTS timeout must be between 1 and 600 seconds")
 
-    def post(self, path, data, content_type="application/json"):
+    def post(self, path, data, content_type="application/json", timeout=None):
         request = urllib.request.Request(self.url + path, data=data,
                                          headers={"Content-Type": content_type})
         for attempt in range(40):
             try:
                 # A local voice request should not traverse an HTTP proxy from the environment.
                 opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-                return opener.open(request, timeout=self.timeout)
+                return opener.open(request, timeout=timeout or self.timeout)
             except urllib.error.HTTPError as exc:
                 # s2.cpp releases its busy flag just after the previous stream ends; wait up to 10 s.
                 if exc.code == 503 and attempt < 39:
@@ -95,8 +98,10 @@ class Backend:
                 raise AudioError(f"Cannot reach {self.url}: {exc}") from exc
 
     @contextmanager
-    def synthesize(self, text):
+    def synthesize(self, text, live=True):
+        """live=False: nobody hears the PCM as it arrives (no playback), so it may come late."""
         if self.kind == "s2cpp":
+            timeout = None
             params = {"stream": True, "chunked": True, "output_format": "pcm_s16le",
                       "stream_decode_stride_frames": 4, "stream_holdback_frames": 8,
                       "stream_start_buffer_ms": 0, "max_new_tokens": 768,
@@ -106,13 +111,21 @@ class Backend:
             if per_char is not None:
                 # With RTF > 1 the playback deficit grows with sentence length, so scale the head start.
                 params["stream_start_buffer_ms"] = round(float(per_char) * len(text))
+            if not live and runtime.codec_arg(self.config.get("server", {})) == "--codec-cpu":
+                # Each stride re-decodes the clip so far, which on a CPU codec (Metal) doubled the
+                # time on an M5. Without playback, decode about once per sentence; 256 frames
+                # (~12 s of audio) bounds the silence; a busy machine ([server] parallel) can still
+                # take minutes for that, so allow up to 600 s. A GPU codec (CUDA's default) keeps
+                # its measured settings.
+                params["stream_decode_stride_frames"] = max(256, int(params["stream_decode_stride_frames"]))
+                timeout = max(self.timeout, 600)
             # These values are a wire contract, not user-selectable generation options.
             params.update(stream=True, chunked=True, output_format="pcm_s16le")
             fields = {"text": text, "params": json.dumps(params)}
             if self.config.get("voice"):
                 fields["voice"] = self.config["voice"]
             payload, content_type = multipart(fields)
-            with self.post("/generate", payload, content_type) as response:
+            with self.post("/generate", payload, content_type, timeout) as response:
                 encoding = response.headers.get("X-Audio-Encoding", "").lower()
                 if encoding != "pcm_s16le":
                     raise AudioError("s2.cpp must return X-Audio-Encoding: pcm_s16le; update the server")
@@ -213,14 +226,46 @@ def transform(chunks, fmt, style):
             thread.join(timeout=1)
 
 
+def mac_pcm_player():
+    """The Core Audio streaming helper for macOS playback, built once into <home>/cache, or None
+    without Swift (Xcode Command Line Tools); callers then fall back to ffplay."""
+    from .voices import RUNTIME
+
+    source = Path(__file__).resolve().parents[2] / "scripts" / "macos_pcm_player.swift"
+    swiftc = shutil.which("swiftc")
+    if not swiftc or not source.is_file():
+        return None
+    # Named by content: a skill update copied with old timestamps must not reuse a stale build.
+    executable = RUNTIME / f"macos-pcm-player-{hashlib.sha256(source.read_bytes()).hexdigest()[:12]}"
+    if not executable.is_file():
+        RUNTIME.mkdir(parents=True, exist_ok=True)
+        temporary = executable.with_name(f".{executable.name}-{os.getpid()}")
+        result = subprocess.run([swiftc, "-O", "-suppress-warnings", str(source), "-o",
+                                 str(temporary)], capture_output=True, text=True)
+        if result.returncode:
+            temporary.unlink(missing_ok=True)
+            detail = result.stderr.strip()
+            raise AudioError("Could not build macOS audio player" + (f": {detail}" if detail else ""))
+        os.replace(temporary, executable)
+    return str(executable)
+
+
 def render(events, backend, output, *, play=False, force=False, filler=None, filler_after=.5):
     """filler: optional (Format, PCM16) inserted only if no speech audio arrived filler_after s in."""
     output = Path(output)
     metadata = output.with_suffix(".json")
     if not force and (output.exists() or metadata.exists()):
         raise AudioError("Output exists; choose another filename or use --force")
-    if play and not shutil.which("ffplay"):
-        raise AudioError("--play requires ffplay")
+    mac_player = None
+    if play and sys.platform == "darwin":
+        try:
+            mac_player = mac_pcm_player()
+        except AudioError:
+            if not shutil.which("ffplay"):
+                raise
+    if play and not mac_player and not shutil.which("ffplay"):
+        raise AudioError("--play requires ffplay" +
+                         (" or Swift (Xcode Command Line Tools)" if sys.platform == "darwin" else ""))
     if any(isinstance(e, Speech) and filters(e.style, Format(44100)) for e in events):
         if not shutil.which("ffmpeg"):
             raise AudioError("FFmpeg is required for SSML prosody and emphasis")
@@ -242,6 +287,8 @@ def render(events, backend, output, *, play=False, force=False, filler=None, fil
         wav.writeframesraw(data)
         if player:
             player.stdin.write(data)
+            if mac_player:
+                player.stdin.flush()
         frames += len(data) // fmt.frame_bytes
 
     def non_speech(event):
@@ -263,10 +310,14 @@ def render(events, backend, output, *, play=False, force=False, filler=None, fil
         wav = wave.open(temporary, "wb")
         wav.setparams((fmt.channels, 2, fmt.rate, 0, "NONE", "not compressed"))
         if play:
-            player = subprocess.Popen([shutil.which("ffplay"), "-loglevel", "error",
-                "-nodisp", "-autoexit", "-f", "s16le", "-ar", str(fmt.rate),
-                "-ch_layout", "mono" if fmt.channels == 1 else "stereo",
-                "-i", "pipe:0"], stdin=subprocess.PIPE)
+            if mac_player:
+                player = subprocess.Popen([mac_player, str(fmt.rate), str(fmt.channels)],
+                                          stdin=subprocess.PIPE)
+            else:
+                player = subprocess.Popen([shutil.which("ffplay"), "-loglevel", "error",
+                    "-nodisp", "-autoexit", "-f", "s16le", "-ar", str(fmt.rate),
+                    "-ch_layout", "mono" if fmt.channels == 1 else "stereo",
+                    "-i", "pipe:0"], stdin=subprocess.PIPE)
         for queued in pending:
             non_speech(queued)
 
@@ -292,7 +343,7 @@ def render(events, backend, output, *, play=False, force=False, filler=None, fil
                     non_speech(event)
                 continue
             segment_started = time.perf_counter()
-            with backend.synthesize(event.text) as (current, chunks):
+            with backend.synthesize(event.text, live=play) as (current, chunks):
                 if fmt is None:
                     start(current)
                     if filler:
@@ -336,8 +387,12 @@ def render(events, backend, output, *, play=False, force=False, filler=None, fil
         report["playback_enabled"] = play
         if player:
             player.stdin.close()
-            if player.wait(timeout=120):
-                raise AudioError("ffplay failed")
+            try:
+                failed = player.wait(timeout=120)
+            except subprocess.TimeoutExpired:
+                raise AudioError("Playback did not finish within 120 s of the last audio") from None
+            if failed:
+                raise AudioError("macOS audio player failed" if mac_player else "ffplay failed")
         os.replace(temporary, output)
         metadata.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         return report

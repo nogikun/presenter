@@ -39,7 +39,7 @@
 
 ## presentation.mp4
 
-```powershell
+```console
 uv run --project "<presenter>/tools" presenter-tts video "<deck>"
 ```
 

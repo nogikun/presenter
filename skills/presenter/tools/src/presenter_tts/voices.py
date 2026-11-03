@@ -13,6 +13,7 @@ import tempfile
 import wave
 
 from .audio import AudioError
+from . import runtime
 
 # One home per user, shared by every project and kept across skill updates (like uv's cache);
 # PRESENTER_TTS_HOME overrides it. cache/ holds what can be rebuilt (engine, model, fillers) and may
@@ -67,12 +68,16 @@ def normalize(path, peak_db=-3.0, max_gain_db=20.0):
 
 
 def engine():
-    """s2.cpp executable, model, tokenizer and an environment that finds its CUDA DLLs."""
-    executable = RUNTIME / "s2-build" / "Release" / "s2.exe"
+    """s2.cpp executable, model, tokenizer and its platform-specific environment."""
+    try:
+        profile = runtime.current()
+    except ValueError as exc:
+        raise AudioError(str(exc)) from exc
+    executable = RUNTIME / profile["executable"]
     model = RUNTIME / "models" / "s2-pro-q4_k_m.gguf"
     for path in (executable, model, model.with_name("tokenizer.json")):
         if not path.is_file():
-            raise AudioError(f"Missing {path}. Run tools/setup-s2.ps1 first.")
+            raise AudioError(f"Missing {path}. Run tools/scripts/{profile['setup']} first.")
     env = dict(os.environ)
     cuda = RUNTIME / "s2-cuda-root.txt"
     if cuda.is_file():
@@ -118,7 +123,7 @@ def clone(name, audio, transcript, *, sample_text, sample_output, force=False, g
                    "--save-voice", "--voice-dir", str(staging), "--text", sample_text,
                    "--output", str(sample_output)]
         if gpu:
-            command += ["--cuda", "0", "--gpu-layers", "36", "--codec-follow-backend"]
+            command += runtime.accelerator_args({}) + [runtime.codec_arg({})]
         Path(sample_output).parent.mkdir(parents=True, exist_ok=True)
         proc = subprocess.run(command, capture_output=True, text=True, encoding="utf-8",
                               errors="replace", env=env)
